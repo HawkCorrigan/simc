@@ -164,7 +164,7 @@ public:
   }
 };
 
-template <template <typename> class F>
+template <template <typename> class F, typename T = double>
 class expr_binary_t : public binary_base_t
 {
 public:
@@ -175,7 +175,7 @@ public:
 
   double evaluate() override  // override
   {
-    return F<double>()( left->eval(), right->eval() );
+    return F<T>()( left->eval(), right->eval() );
   }
 };
 
@@ -199,6 +199,8 @@ std::unique_ptr<expr_t> select_binary( util::string_view name, token_e op, std::
       return std::make_unique<expr_binary_t<std::multiplies>>( name, op, std::move(left), std::move(right) );
     case TOK_DIV:
       return std::make_unique<expr_binary_t<std::divides>>( name, op, std::move(left), std::move(right) );
+    case TOK_MOD:
+      return std::make_unique<expr_binary_t<std::modulus, int64_t>>( name, op, std::move(left), std::move(right) );
 
     case TOK_MAX:
       return std::make_unique<expr_binary_t<binary::max>>(name, op, std::move(left), std::move(right));
@@ -632,7 +634,7 @@ public:
   }
 };
 
-template <template <typename> class F>
+template <template <typename> class F, typename T = double>
 class expr_analyze_binary_t : public analyze_binary_base_t
 {
 public:
@@ -643,7 +645,7 @@ public:
 
   double evaluate() override  // override
   {
-    result = F<double>()( left->eval(), right->eval() );
+    result = F<T>()( left->eval(), right->eval() );
     return result;
   }
 
@@ -661,7 +663,7 @@ public:
     bool right_constant = right->is_constant( &right_value );
     if ( left_constant && right_constant )
     {
-      result = F<double>()( left_value, right_value );
+      result = F<T>()( left_value, right_value );
       if (EXPRESSION_DEBUG)
       {
         printf("Reduced %*d %s (%s, %s) binary expression to %f\n", spacing,
@@ -686,7 +688,7 @@ public:
         }
         double evaluate() override
         {
-          return F<double>()( left, right->eval() );
+          return F<T>()( left, right->eval() );
         }
       };
       return std::make_unique<left_reduced_t>(
@@ -708,7 +710,7 @@ public:
         }
         double evaluate() override
         {
-          return F<double>()( left->eval(), right );
+          return F<T>()( left->eval(), right );
         }
       };
       return std::make_unique<right_reduced_t>(
@@ -739,6 +741,8 @@ std::unique_ptr<expr_t> select_analyze_binary( util::string_view name, token_e o
       return std::make_unique<expr_analyze_binary_t<std::multiplies>>( name, op, std::move(left), std::move(right) );
     case TOK_DIV:
       return std::make_unique<expr_analyze_binary_t<std::divides>>( name, op, std::move(left), std::move(right) );
+    case TOK_MOD:
+      return std::make_unique<expr_analyze_binary_t<std::modulus, int64_t>>( name, op, std::move(left), std::move(right) );
 
     case TOK_MAX:
       return std::make_unique<expr_analyze_binary_t<binary::max>>( name, op, std::move(left), std::move(right) );
@@ -764,10 +768,6 @@ std::unique_ptr<expr_t> select_analyze_binary( util::string_view name, token_e o
   }
 }
 
-}  // UNNAMED NAMESPACE ====================================================
-
-// precedence ===============================================================
-
 int precedence( token_e expr_token_type )
 {
   switch ( expr_token_type )
@@ -784,6 +784,7 @@ int precedence( token_e expr_token_type )
 
     case TOK_MULT:
     case TOK_DIV:
+    case TOK_MOD:
       return 7;
 
     case TOK_ADD:
@@ -819,56 +820,9 @@ int precedence( token_e expr_token_type )
   }
 }
 
-// is_unary =================================================================
-
-bool is_unary( token_e expr_token_type )
-{
-  switch ( expr_token_type )
-  {
-    case TOK_NOT:
-    case TOK_PLUS:
-    case TOK_MINUS:
-    case TOK_ABS:
-    case TOK_FLOOR:
-    case TOK_CEIL:
-      return true;
-    default:
-      return false;
-  }
-}
-
-// is_binary ================================================================
-
-bool is_binary( token_e expr_token_type )
-{
-  switch ( expr_token_type )
-  {
-    case TOK_MULT:
-    case TOK_DIV:
-    case TOK_ADD:
-    case TOK_SUB:
-    case TOK_MAX:
-    case TOK_MIN:
-    case TOK_EQ:
-    case TOK_NOTEQ:
-    case TOK_LT:
-    case TOK_LTEQ:
-    case TOK_GT:
-    case TOK_GTEQ:
-    case TOK_AND:
-    case TOK_XOR:
-    case TOK_OR:
-    case TOK_IN:
-    case TOK_NOTIN:
-      return true;
-    default:
-      return false;
-  }
-}
-
 // next_token ===============================================================
 
-token_e next_token( action_t* action, const std::string& expr_str,
+token_e next_token( action_t* action, util::string_view expr_str,
                     int& current_index, std::string& token_str,
                     token_e prev_token )
 {
@@ -893,7 +847,15 @@ token_e next_token( action_t* action, const std::string& expr_str,
   if ( c == '*' )
     return TOK_MULT;
   if ( c == '%' )
+  {
+    if ( expr_str[ current_index ] == '%' )
+    {
+      current_index++;
+      token_str += "%";
+      return TOK_MOD;
+    }
     return TOK_DIV;
+  }
   if ( c == '&' )
   {
     if ( expr_str[ current_index ] == '&' )
@@ -1008,22 +970,73 @@ token_e next_token( action_t* action, const std::string& expr_str,
 
   if ( action )
   {
-    action->sim->errorf( "%s-%s: Unexpected token (%c) in %s\n",
+    action->sim->error( "{}-{}: Unexpected token ({}) in {}\n",
                          action->player->name(), action->name(), c,
-                         expr_str.c_str() );
+                         expr_str );
   }
   else
   {
-    printf( "Unexpected token (%c) in %s\n", c, expr_str.c_str() );
+    fmt::print( "Unexpected token ({}) in {}\n", c, expr_str );
   }
 
   return TOK_UNKNOWN;
 }
 
+}  // UNNAMED NAMESPACE ====================================================
+
+
+// is_unary =================================================================
+
+bool is_unary( token_e expr_token_type )
+{
+  switch ( expr_token_type )
+  {
+    case TOK_NOT:
+    case TOK_PLUS:
+    case TOK_MINUS:
+    case TOK_ABS:
+    case TOK_FLOOR:
+    case TOK_CEIL:
+      return true;
+    default:
+      return false;
+  }
+}
+
+// is_binary ================================================================
+
+bool is_binary( token_e expr_token_type )
+{
+  switch ( expr_token_type )
+  {
+    case TOK_MULT:
+    case TOK_DIV:
+    case TOK_MOD:
+    case TOK_ADD:
+    case TOK_SUB:
+    case TOK_MAX:
+    case TOK_MIN:
+    case TOK_EQ:
+    case TOK_NOTEQ:
+    case TOK_LT:
+    case TOK_LTEQ:
+    case TOK_GT:
+    case TOK_GTEQ:
+    case TOK_AND:
+    case TOK_XOR:
+    case TOK_OR:
+    case TOK_IN:
+    case TOK_NOTIN:
+      return true;
+    default:
+      return false;
+  }
+}
+
 // parse_tokens =============================================================
 
 std::vector<expr_token_t> parse_tokens( action_t* action,
-                                        const std::string& expr_str )
+                                        util::string_view expr_str )
 {
   std::vector<expr_token_t> tokens;
 
@@ -1234,7 +1247,7 @@ int expr_t::get_global_id()
 // build_expression_tree ====================================================
 
 static std::unique_ptr<expr_t> build_expression_tree(
-    action_t* action, std::vector<expression::expr_token_t>& tokens,
+    action_t* action, util::span<expression::expr_token_t> tokens,
     bool optimize )
 {
   std::vector<std::unique_ptr<expr_t>> stack;
@@ -1297,7 +1310,7 @@ static std::unique_ptr<expr_t> build_expression_tree(
 
 // action_expr_t::parse =====================================================
 
-std::unique_ptr<expr_t> expr_t::parse( action_t* action, const std::string& expr_str,
+std::unique_ptr<expr_t> expr_t::parse( action_t* action, util::string_view expr_str,
                        bool optimize )
 {
   try

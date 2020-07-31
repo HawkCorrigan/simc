@@ -31,6 +31,7 @@
 #include "player/actor_target_data.hpp"
 #include "player/azerite_data.hpp"
 #include "player/consumable.hpp"
+#include "player/covenant.hpp"
 #include "player/instant_absorb.hpp"
 #include "player/pet.hpp"
 #include "player/player_demise_event.hpp"
@@ -567,7 +568,7 @@ bool has_foreground_actions( const player_t& p )
 
 // parse_talent_url =========================================================
 
-bool parse_talent_url( sim_t* sim, const std::string& name, const std::string& url )
+bool parse_talent_url( sim_t* sim, util::string_view name, const std::string& url )
 {
   assert( name == "talents" );
   (void)name;
@@ -617,7 +618,7 @@ bool parse_talent_url( sim_t* sim, const std::string& name, const std::string& u
 
 // parse_talent_override ====================================================
 
-bool parse_talent_override( sim_t* sim, const std::string& name, const std::string& override_str )
+bool parse_talent_override( sim_t* sim, util::string_view name, const std::string& override_str )
 {
   assert( name == "talent_override" );
   (void)name;
@@ -633,7 +634,7 @@ bool parse_talent_override( sim_t* sim, const std::string& name, const std::stri
 
 // parse_timeofday ====================================================
 
-bool parse_timeofday( sim_t* sim, const std::string& name, const std::string& override_str )
+bool parse_timeofday( sim_t* sim, util::string_view name, const std::string& override_str )
 {
   assert( name == "timeofday" );
   (void)name;
@@ -659,7 +660,7 @@ bool parse_timeofday( sim_t* sim, const std::string& name, const std::string& ov
 
 // parse_loa ====================================================
 
-bool parse_loa( sim_t* sim, const std::string& name, const std::string& override_str )
+bool parse_loa( sim_t* sim, util::string_view name, const std::string& override_str )
 {
   assert( name == "zandalari_loa" );
   ( void )name;
@@ -700,7 +701,7 @@ bool parse_loa( sim_t* sim, const std::string& name, const std::string& override
 }
 
 // parse_tricks
-bool parse_tricks( sim_t* sim, const std::string& name, const std::string& override_str )
+bool parse_tricks( sim_t* sim, util::string_view name, const std::string& override_str )
 {
   assert( name == "vulpera_tricks" );
   (void)name;
@@ -738,7 +739,7 @@ bool parse_tricks( sim_t* sim, const std::string& name, const std::string& overr
 
 // parse_role_string ========================================================
 
-bool parse_role_string( sim_t* sim, const std::string& name, const std::string& value )
+bool parse_role_string( sim_t* sim, util::string_view name, const std::string& value )
 {
   assert( name == "role" );
   (void)name;
@@ -750,7 +751,7 @@ bool parse_role_string( sim_t* sim, const std::string& name, const std::string& 
 
 // parse_world_lag ==========================================================
 
-bool parse_world_lag( sim_t* sim, const std::string& name, const std::string& value )
+bool parse_world_lag( sim_t* sim, util::string_view name, const std::string& value )
 {
   assert( name == "world_lag" );
   (void)name;
@@ -769,7 +770,7 @@ bool parse_world_lag( sim_t* sim, const std::string& name, const std::string& va
 
 // parse_world_lag ==========================================================
 
-bool parse_world_lag_stddev( sim_t* sim, const std::string& name, const std::string& value )
+bool parse_world_lag_stddev( sim_t* sim, util::string_view name, const std::string& value )
 {
   assert( name == "world_lag_stddev" );
   (void)name;
@@ -788,7 +789,7 @@ bool parse_world_lag_stddev( sim_t* sim, const std::string& name, const std::str
 
 // parse_brain_lag ==========================================================
 
-bool parse_brain_lag( sim_t* sim, const std::string& name, const std::string& value )
+bool parse_brain_lag( sim_t* sim, util::string_view name, const std::string& value )
 {
   assert( name == "brain_lag" );
   (void)name;
@@ -805,7 +806,7 @@ bool parse_brain_lag( sim_t* sim, const std::string& name, const std::string& va
 
 // parse_brain_lag_stddev ===================================================
 
-bool parse_brain_lag_stddev( sim_t* sim, const std::string& name, const std::string& value )
+bool parse_brain_lag_stddev( sim_t* sim, util::string_view name, const std::string& value )
 {
   assert( name == "brain_lag_stddev" );
   (void)name;
@@ -822,7 +823,7 @@ bool parse_brain_lag_stddev( sim_t* sim, const std::string& name, const std::str
 
 // parse_specialization =====================================================
 
-bool parse_specialization( sim_t* sim, const std::string&, const std::string& value )
+bool parse_specialization( sim_t* sim, util::string_view, const std::string& value )
 {
   sim->active_player->_spec = dbc::translate_spec_str( sim->active_player->type, value );
 
@@ -837,7 +838,7 @@ bool parse_specialization( sim_t* sim, const std::string&, const std::string& va
 
 // parse stat timelines =====================================================
 
-bool parse_stat_timelines( sim_t* sim, const std::string& name, const std::string& value )
+bool parse_stat_timelines( sim_t* sim, util::string_view name, const std::string& value )
 {
   assert( name == "stat_timelines" );
   (void)name;
@@ -861,7 +862,7 @@ bool parse_stat_timelines( sim_t* sim, const std::string& name, const std::strin
 
 // parse_origin =============================================================
 
-bool parse_origin( sim_t* sim, const std::string&, const std::string& origin )
+bool parse_origin( sim_t* sim, util::string_view, const std::string& origin )
 {
   player_t& p = *sim->active_player;
 
@@ -879,7 +880,7 @@ bool parse_origin( sim_t* sim, const std::string&, const std::string& origin )
 
 // parse_source ===============================================================
 
-bool parse_source( sim_t* sim, const std::string&, const std::string& value )
+bool parse_source( sim_t* sim, util::string_view, const std::string& value )
 {
   player_t& p = *sim->active_player;
 
@@ -888,7 +889,7 @@ bool parse_source( sim_t* sim, const std::string&, const std::string& value )
   return true;
 }
 
-bool parse_set_bonus( sim_t* sim, const std::string&, const std::string& value )
+bool parse_set_bonus( sim_t* sim, util::string_view, const std::string& value )
 {
   static const char* error_str = "%s invalid 'set_bonus' option value '%s' given, available options: %s";
 
@@ -923,7 +924,7 @@ bool parse_set_bonus( sim_t* sim, const std::string&, const std::string& value )
   return true;
 }
 
-bool parse_initial_resource( sim_t* sim, const std::string&, const std::string& value )
+bool parse_initial_resource( sim_t* sim, util::string_view, const std::string& value )
 {
   player_t* player = sim->active_player;
   auto opts        = util::string_split( value, ":/" );
@@ -1236,6 +1237,7 @@ player_t::player_t( sim_t* s, player_e t, util::string_view n, race_e r )
   {
     azerite = azerite::create_state( this );
     azerite_essence = azerite::create_essence_state( this );
+    covenant = covenant::create_player_state( this );
   }
 
   // Set the gear object to a special default value, so we can support gear_x=0 properly.
@@ -1359,40 +1361,37 @@ player_t::base_initial_current_t::base_initial_current_t() :
   range::fill( attribute_multiplier, 1.0 );
 }
 
-std::string player_t::base_initial_current_t::to_string()
+void format_to( const player_t::base_initial_current_t& s, fmt::format_context::iterator out )
 {
-  std::ostringstream s;
-
-  s << stats.to_string();
-  s << " spell_power_per_intellect=" << spell_power_per_intellect;
-  s << " spell_power_per_attack_power=" << spell_power_per_attack_power;
-  s << " spell_crit_per_intellect=" << spell_crit_per_intellect;
-  s << " attack_power_per_strength=" << attack_power_per_strength;
-  s << " attack_power_per_agility=" << attack_power_per_agility;
-  s << " attack_crit_per_agility=" << attack_crit_per_agility;
-  s << " dodge_per_agility=" << dodge_per_agility;
-  s << " parry_per_strength=" << parry_per_strength;
-  s << " health_per_stamina=" << health_per_stamina;
+  fmt::format_to( out, "{}", s.stats );
+  fmt::format_to( out, " spell_power_per_intellect={}", s.spell_power_per_intellect );
+  fmt::format_to( out, " spell_power_per_attack_power={}", s.spell_power_per_attack_power );
+  fmt::format_to( out, " spell_crit_per_intellect={}", s.spell_crit_per_intellect );
+  fmt::format_to( out, " attack_power_per_strength={}", s.attack_power_per_strength );
+  fmt::format_to( out, " attack_power_per_agility={}", s.attack_power_per_agility );
+  fmt::format_to( out, " attack_crit_per_agility={}", s.attack_crit_per_agility );
+  fmt::format_to( out, " dodge_per_agility={}", s.dodge_per_agility );
+  fmt::format_to( out, " parry_per_strength={}", s.parry_per_strength );
+  fmt::format_to( out, " health_per_stamina={}", s.health_per_stamina );
   // resource_reduction
-  s << " miss=" << miss;
-  s << " dodge=" << dodge;
-  s << " parry=" << parry;
-  s << " block=" << block;
-  s << " spell_crit_chance=" << spell_crit_chance;
-  s << " attack_crit_chance=" << attack_crit_chance;
-  s << " block_reduction=" << block_reduction;
-  s << " mastery=" << mastery;
-  s << " skill=" << skill;
-  s << " distance=" << distance;
-  s << " armor_coeff=" << armor_coeff;
-  s << " sleeping=" << sleeping;
+  fmt::format_to( out, " miss={}", s.miss );
+  fmt::format_to( out, " dodge={}", s.dodge );
+  fmt::format_to( out, " parry={}", s.parry );
+  fmt::format_to( out, " block={}", s.block );
+  fmt::format_to( out, " spell_crit_chance={}", s.spell_crit_chance );
+  fmt::format_to( out, " attack_crit_chance={}", s.attack_crit_chance );
+  fmt::format_to( out, " block_reduction={}", s.block_reduction );
+  fmt::format_to( out, " mastery={}", s.mastery );
+  fmt::format_to( out, " skill={}", s.skill );
+  fmt::format_to( out, " distance={}", s.distance );
+  fmt::format_to( out, " armor_coeff={}", s.armor_coeff );
+  fmt::format_to( out, " sleeping={}", s.sleeping );
   // attribute_multiplier
-  s << " spell_power_multiplier=" << spell_power_multiplier;
-  s << " attack_power_multiplier=" << attack_power_multiplier;
-  s << " base_armor_multiplier=" << base_armor_multiplier;
-  s << " armor_multiplier=" << armor_multiplier;
-  s << " position=" << util::position_type_string( position );
-  return s.str();
+  fmt::format_to( out, " spell_power_multiplier={}", s.spell_power_multiplier );
+  fmt::format_to( out, " attack_power_multiplier={}", s.attack_power_multiplier );
+  fmt::format_to( out, " base_armor_multiplier={}", s.base_armor_multiplier );
+  fmt::format_to( out, " armor_multiplier={}", s.armor_multiplier );
+  fmt::format_to( out, " position={}", s.position );
 }
 
 void player_t::init()
@@ -1486,7 +1485,7 @@ void player_t::init_base_stats()
   if ( !is_enemy() )
     base.rating.init( *dbc, level() );
 
-  sim->print_debug( "{} base ratings initialized: {}", *this, base.rating.to_string() );
+  sim->print_debug( "{} base ratings initialized: {}", *this, base.rating );
 
   if ( !is_enemy() )
   {
@@ -1635,7 +1634,7 @@ void player_t::init_base_stats()
       collected_data.dtps.change_mode( false );
   }
 
-  sim->print_debug( "{} generic base stats: {}", *this, base.to_string() );
+  sim->print_debug( "{} generic base stats: {}", *this, base );
 }
 
 /**
@@ -1678,7 +1677,7 @@ void player_t::init_initial_stats()
         total_gear.add_stat( stat, gear.get_stat( stat ) );
     }
 
-    sim->print_debug( "{} total gear stats: {}", *this, total_gear.to_string() );
+    sim->print_debug( "{} total gear stats: {}", *this, total_gear );
 
     initial.stats += enchant;
     initial.stats += sim->enchant;
@@ -1686,7 +1685,7 @@ void player_t::init_initial_stats()
 
   initial.stats += total_gear;
 
-  sim->print_debug( "{} generic initial stats: %s", *this, initial.to_string() );
+  sim->print_debug( "{} generic initial stats: {}", *this, initial );
 }
 
 void player_t::init_items()
@@ -1924,8 +1923,7 @@ void player_t::init_defense()
 
 void player_t::init_weapon( weapon_t& w )
 {
-  sim->print_debug( "Initializing weapon ( type {} ) for {}.", util::weapon_type_string( w.type ),
-                           *this );
+  sim->print_debug( "Initializing weapon ( type {} ) for {}.", w.type, *this );
 
   if ( w.type == WEAPON_NONE )
     return;
@@ -2316,9 +2314,9 @@ void player_t::activate_action_list( action_priority_list_t* a, execute_type typ
   a->used = true;
 }
 
-void player_t::override_talent( std::string& override_str )
+void player_t::override_talent( util::string_view override_str )
 {
-  std::string::size_type cut_pt = override_str.find( ',' );
+  auto cut_pt = override_str.find( ',' );
 
   if ( cut_pt != override_str.npos && override_str.substr( cut_pt + 1, 3 ) == "if=" )
   {
@@ -2332,16 +2330,14 @@ void player_t::override_talent( std::string& override_str )
     override_str = override_str.substr( 0, cut_pt );
   }
 
-  util::tokenize( override_str );
-
   // Support disable_row:<row> syntax
   std::string::size_type pos = override_str.find( "disable_row" );
   if ( pos != std::string::npos )
   {
-    std::string row_str = override_str.substr( 11 );
+    auto row_str = override_str.substr( 11 );
     if ( !row_str.empty() )
     {
-      unsigned row = util::to_unsigned( override_str.substr( 11 ) );
+      unsigned row = util::to_unsigned( std::string(override_str.substr( 11 )) );
       if ( row == 0 || row > MAX_TALENT_ROWS )
       {
         throw std::invalid_argument(fmt::format("talent_override: Invalid talent row {} in '{}'.", row, override_str ));
@@ -2356,7 +2352,7 @@ void player_t::override_talent( std::string& override_str )
     }
   }
 
-  unsigned spell_id = dbc->talent_ability_id( type, specialization(), override_str.c_str(), true );
+  unsigned spell_id = dbc->talent_ability_id( type, specialization(), override_str, true );
 
   if ( !spell_id || dbc->spell( spell_id )->id() != spell_id )
   {
@@ -3075,7 +3071,7 @@ void player_t::init_finished()
     range::for_each( items, [this]( const item_t& item ) {
       if ( item.active() )
       {
-        sim->out_debug << item.to_string();
+        sim->print_debug( "{}", item );
       }
     } );
   }
@@ -5067,7 +5063,7 @@ void player_t::reset()
   // Restore default target
   target = default_target;
 
-  sim->print_debug( "{} resets current stats ( reset to initial ): {}", *this, current.to_string() );
+  sim->print_debug( "{} resets current stats ( reset to initial ): {}", *this, current );
 
   for ( auto& buff : buff_list )
     buff->reset();
@@ -6168,7 +6164,7 @@ void player_t::stat_gain( stat_e stat, double amount, gain_t* gain, action_t* ac
 
   if ( sim->debug )
   {
-    sim->out_debug.print( "{} stats: {}", name(), current.stats.to_string() );
+    sim->out_debug.print( "{} stats: {}", name(), current.stats );
   }
 }
 
@@ -6308,7 +6304,7 @@ void player_t::stat_loss( stat_e stat, double amount, gain_t* gain, action_t* ac
 
   if ( sim->debug )
   {
-    sim->out_debug.print( "{} stats: {}", name(), current.stats.to_string() );
+    sim->out_debug.print( "{} stats: {}", name(), current.stats );
   }
 }
 
@@ -7833,7 +7829,7 @@ struct wait_fixed_t : public wait_action_base_t
     interrupt_auto_attack = false;  // Probably shouldn't interrupt autoattacks while waiting.
     quiet                 = true;
 
-    time_expr = std::unique_ptr<expr_t>( expr_t::parse( this, sec_str ) );
+    time_expr = expr_t::parse( this, sec_str );
     if ( !time_expr )
     {
       sim->errorf( "%s: Unable to generate wait expression from '%s'", player->name(), options_str.c_str() );
@@ -8150,7 +8146,7 @@ struct use_item_t : public action_t
     return action_t::ready();
   }
 
-  std::unique_ptr<expr_t> create_special_effect_expr( const std::vector<std::string>& data_str_split )
+  std::unique_ptr<expr_t> create_special_effect_expr( util::span<std::string> data_str_split )
   {
     struct use_item_buff_type_expr_t : public expr_t
     {
@@ -8191,9 +8187,9 @@ struct use_item_t : public action_t
     return std::make_unique<use_item_buff_type_expr_t>( e->stat_type() == stat );
   }
 
-  std::unique_ptr<expr_t> create_expression( const std::string& name_str ) override
+  std::unique_ptr<expr_t> create_expression( util::string_view name_str ) override
   {
-    std::vector<std::string> split = util::string_split( name_str, "." );
+    auto split = util::string_split( name_str, "." );
     if ( auto e = create_special_effect_expr( split ) )
     {
       return e;
@@ -8301,7 +8297,7 @@ struct use_items_t : public action_t
     return false;
   }
 
-  bool parse_slots( sim_t* /* sim */, const std::string& /* opt_name */, const std::string& opt_value )
+  bool parse_slots( sim_t* /* sim */, util::string_view /* opt_name */, const std::string& opt_value )
   {
     // Empty out default priority slots. slots= option will change the use_items action logic so
     // that only the designated slots will be checked/executed for a special effect
@@ -8670,7 +8666,7 @@ struct pool_resource_t : public action_t
 
 }  // UNNAMED NAMESPACE
 
-action_t* player_t::create_action( const std::string& name, const std::string& options_str )
+action_t* player_t::create_action( util::string_view name, const std::string& options_str )
 {
   if ( name == "ancestral_call" )
     return new ancestral_call_t( this, options_str );
@@ -8762,6 +8758,11 @@ void player_t::parse_talents_numbers( const std::string& talent_string )
   }
 
   create_talents_numbers();
+}
+
+pet_t* player_t::create_pet( util::string_view, util::string_view )
+{
+  return nullptr;
 }
 
 /**
@@ -9165,7 +9166,7 @@ void player_t::create_talents_numbers()
   }
 }
 
-static bool parse_min_gcd( sim_t* sim, const std::string& name, const std::string& value )
+static bool parse_min_gcd( sim_t* sim, util::string_view name, const std::string& value )
 {
   if ( name != "min_gcd" )
     return false;
@@ -9435,7 +9436,37 @@ azerite_essence_t player_t::find_azerite_essence( util::string_view name, bool t
   return azerite_essence->get_essence( name, tokenized );
 }
 
-item_runeforge_t player_t::find_runeforge_legendary( const std::string& name ) const
+conduit_data_t player_t::find_conduit_spell( util::string_view name ) const
+{
+  if ( !covenant )
+  {
+    return {};
+  }
+
+  return covenant->get_conduit_ability( name );
+}
+
+const spell_data_t* player_t::find_soulbind_spell( util::string_view name ) const
+{
+  if ( !covenant )
+  {
+    return spell_data_t::not_found();
+  }
+
+  return covenant->get_soulbind_ability( name );
+}
+
+const spell_data_t* player_t::find_covenant_spell( util::string_view name ) const
+{
+  if ( !covenant )
+  {
+    return spell_data_t::not_found();
+  }
+
+  return covenant->get_covenant_ability( name );
+}
+
+item_runeforge_t player_t::find_runeforge_legendary( util::string_view name ) const
 {
   auto entries = runeforge_legendary_entry_t::find( name, dbc->ptr );
   if ( entries.size() == 0 )
@@ -9562,41 +9593,47 @@ const spell_data_t* player_t::find_class_spell( util::string_view name, speciali
 }
 
 const spell_data_t* player_t::find_rank_spell( util::string_view name,
-                                               util::string_view rank ) const
+                                               util::string_view rank,
+                                               specialization_e spec ) const
 {
-  const auto& entry = rank_class_spell_t::find( name, rank, util::class_id( type ),
-      static_cast<unsigned>( _spec ), dbc->ptr );
-  if ( entry.spell_id == 0 )
+  if ( spec == SPEC_NONE || spec == _spec )
   {
-    return spell_data_t::not_found();
-  }
-
-  if ( entry.class_id != as<unsigned>( util::class_id( type ) ) )
-  {
-    return spell_data_t::not_found();
-  }
-
-  if ( entry.spec_id > 0 && entry.spec_id != static_cast<unsigned>( _spec ) )
-  {
-    return spell_data_t::not_found();
-  }
-
-  if ( entry.override_spell_id )
-  {
-    const auto replace_spell = dbc::find_spell( this, entry.override_spell_id );
-    if ( replace_spell->ok() && as<int>( replace_spell->level() ) <= true_level )
+    const auto& entry = rank_class_spell_t::find( name, rank, util::class_id( type ),
+        static_cast<unsigned>( _spec ), dbc->ptr );
+    if ( entry.spell_id == 0 )
     {
       return spell_data_t::not_found();
     }
+
+    if ( entry.class_id != as<unsigned>( util::class_id( type ) ) )
+    {
+      return spell_data_t::not_found();
+    }
+
+    if ( entry.spec_id > 0 && entry.spec_id != static_cast<unsigned>( _spec ) )
+    {
+      return spell_data_t::not_found();
+    }
+
+    if ( entry.override_spell_id )
+    {
+      const auto replace_spell = dbc::find_spell( this, entry.override_spell_id );
+      if ( replace_spell->ok() && as<int>( replace_spell->level() ) <= true_level )
+      {
+        return spell_data_t::not_found();
+      }
+    }
+
+    const spell_data_t* spell = dbc::find_spell( this, entry.spell_id );
+    if ( !spell->ok() && as<int>( spell->level() ) > true_level )
+    {
+      return spell_data_t::not_found();
+    }
+
+    return spell;
   }
 
-  const spell_data_t* spell = dbc::find_spell( this, entry.spell_id );
-  if ( !spell->ok() && as<int>( spell->level() ) > true_level )
-  {
-    return spell_data_t::not_found();
-  }
-
-  return spell;
+  return spell_data_t::not_found();
 }
 
 const spell_data_t* player_t::find_pet_spell( util::string_view name ) const
@@ -9639,10 +9676,10 @@ const spell_data_t* player_t::find_spell( unsigned int id, specialization_e s ) 
 
 namespace
 {
-std::unique_ptr<expr_t> deprecate_expression( player_t& p, const std::string& old_name, const std::string& new_name, action_t* a = nullptr  )
+std::unique_ptr<expr_t> deprecate_expression( player_t& p, util::string_view old_name, util::string_view new_name, action_t* a = nullptr  )
 {
-  p.sim->errorf( "Use of \"%s\" ( action %s ) in action expressions is deprecated: use \"%s\" instead.\n",
-                  old_name.c_str(), a?a->name() : "unknown", new_name.c_str() );
+  p.sim->error( "Use of \"{}\" ( action {} ) in action expressions is deprecated: use \"{}\" instead.\n",
+                  old_name, a?a->name() : "unknown", new_name );
 
   return p.create_expression( new_name );
 }
@@ -9668,7 +9705,7 @@ struct position_expr_t : public player_expr_t
   }
 };
 
-std::unique_ptr<expr_t> deprecated_player_expressions( player_t& player, const std::string& expression_str )
+std::unique_ptr<expr_t> deprecated_player_expressions( player_t& player, util::string_view expression_str )
 {
   if ( expression_str == "health_pct" )
     return deprecate_expression( player, expression_str, "health.pct" );
@@ -9702,12 +9739,12 @@ std::unique_ptr<expr_t> deprecated_player_expressions( player_t& player, const s
  * Use this function for expressions which are bound to some action property (eg. target, cast_time, etc.) and not
  * just to the player itself.
  */
-std::unique_ptr<expr_t> player_t::create_action_expression( action_t&, const std::string& name )
+std::unique_ptr<expr_t> player_t::create_action_expression( action_t&, util::string_view name )
 {
   return create_expression( name );
 }
 
-std::unique_ptr<expr_t> player_t::create_expression( const std::string& expression_str )
+std::unique_ptr<expr_t> player_t::create_expression( util::string_view expression_str )
 {
   if (auto e = deprecated_player_expressions(*this, expression_str))
   {
@@ -10197,7 +10234,7 @@ std::unique_ptr<expr_t> player_t::create_expression( const std::string& expressi
         }
 
         // build player/pet expression from the tail of the expression string.
-        std::string tail = expression_str.substr( splits[ 1 ].length() + 5 );
+        auto tail = expression_str.substr( splits[ 1 ].length() + 5 );
         if ( auto e = pet->create_expression( tail ) )
         {
           return e;
@@ -10225,7 +10262,7 @@ std::unique_ptr<expr_t> player_t::create_expression( const std::string& expressi
     {
       if ( pet->owner )
       {
-        std::string tail = expression_str.substr( 6 );
+        auto tail = expression_str.substr( 6 );
         if ( auto e = pet->owner->create_expression( tail ) )
         {
           return e;
@@ -10251,10 +10288,15 @@ std::unique_ptr<expr_t> player_t::create_expression( const std::string& expressi
     return azerite_essence->create_expression( splits );
   }
 
+  if ( splits[ 0 ] == "soulbind" || splits[ 0 ] == "conduit" || splits[ 0 ] == "covenant" )
+  {
+    return covenant->create_expression( splits );
+  }
+
   return sim->create_expression( expression_str );
 }
 
-std::unique_ptr<expr_t> player_t::create_resource_expression( const std::string& name_str )
+std::unique_ptr<expr_t> player_t::create_resource_expression( util::string_view name_str )
 {
   auto splits = util::string_split( name_str, "." );
   if ( splits.empty() )
@@ -10317,7 +10359,7 @@ std::unique_ptr<expr_t> player_t::create_resource_expression( const std::string&
 
     else if ( util::str_prefix_ci( splits[ 1 ], "time_to_" ) )
     {
-      std::vector<std::string> parts = util::string_split( splits[ 1 ], "_" );
+      auto parts = util::string_split( splits[ 1 ], "_" );
 
       // foo.time_to_max
       if ( util::str_in_str_ci( parts[ 2 ], "max" ) )
@@ -10345,7 +10387,7 @@ std::unique_ptr<expr_t> player_t::create_resource_expression( const std::string&
     }
   }
 
-  std::string tail = name_str.substr(splits[ 0 ].length() + 1);
+  auto tail = name_str.substr(splits[ 0 ].length() + 1);
   throw std::invalid_argument(fmt::format("Unsupported resource expression '{}'.", tail));
 }
 
@@ -10558,6 +10600,19 @@ std::string player_t::create_profile( save_e stype )
       if ( !azerite_essence_str.empty() )
       {
         profile_str += "azerite_essences=" + azerite_essence_str + term;
+      }
+    }
+
+    if ( covenant )
+    {
+      if ( !covenant->covenant_option_str().empty() )
+      {
+        profile_str += covenant->covenant_option_str() + term;
+      }
+
+      if ( !covenant->soulbind_option_str().empty() )
+      {
+        profile_str += covenant->soulbind_option_str() + term;
       }
     }
   }
@@ -10799,6 +10854,11 @@ void player_t::copy_from( player_t* source )
     azerite_essence -> copy_state( source -> azerite_essence );
   }
 
+  if ( covenant )
+  {
+    covenant->copy_state( source->covenant );
+  }
+
   talent_overrides_str = source->talent_overrides_str;
   action_list_str      = source->action_list_str;
   alist_map            = source->alist_map;
@@ -11009,6 +11069,11 @@ void player_t::create_options()
           azerite.get(), std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) ) );
     add_option( opt_func( "azerite_essences", std::bind( &azerite::azerite_essence_state_t::parse_azerite_essence,
           azerite_essence.get(), std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) ) );
+
+    if ( covenant )
+    {
+      covenant->register_options( this );
+    }
   }
 
   // Obsolete options

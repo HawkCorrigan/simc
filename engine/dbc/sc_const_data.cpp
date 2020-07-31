@@ -173,7 +173,10 @@ static void generate_indices( bool ptr )
 
     for ( const spelleffect_data_t& effect : spell.effects() )
     {
-      if ( effect.subtype() == A_HASTED_CATEGORY )
+      static constexpr effect_subtype_t category_subtypes[] = {
+        A_411, A_453, A_454, A_HASTED_CATEGORY
+      };
+      if ( range::contains( category_subtypes, effect.subtype() ) )
       {
         const unsigned value = as<unsigned>( effect.misc_value1() );
         if ( value != 0 )
@@ -1746,7 +1749,7 @@ bool dbc_t::ability_specialization( uint32_t spell_id, std::vector<specializatio
   {
     if ( spec_spell.spell_id == spell_id )
     {
-      spec_list.push_back( static_cast<const specialization_e>( spec_spell.specialization_id ) );
+      spec_list.push_back( static_cast<specialization_e>( spec_spell.specialization_id ) );
     }
   }
 

@@ -239,9 +239,9 @@ struct smite_t final : public priest_spell_t
   const spell_data_t* smite_rank2;
   smite_t( priest_t& p, util::string_view options_str )
     : priest_spell_t( "smite", p, p.find_class_spell( "Smite" ) ),
-      holy_fire_rank2( priest().find_specialization_spell( 231687 ) ),
+      holy_fire_rank2( priest().find_rank_spell( "Holy Fire", "Rank 2" ) ),
       holy_word_chastise( priest().find_specialization_spell( 88625 ) ),
-      smite_rank2( priest().find_specialization_spell( 262861 ) )
+      smite_rank2( priest().find_rank_spell( "Smite", "Rank 2" ) )
   {
     parse_options( options_str );
     if ( smite_rank2->ok() )
@@ -370,8 +370,6 @@ struct summon_shadowfiend_t final : public summon_pet_t
     parse_options( options_str );
     harmful            = false;
     summoning_duration = data().duration();
-    cooldown           = p.cooldowns.shadowfiend;
-    cooldown->duration = data().cooldown();
     cooldown->duration *= 1.0 + azerite::vision_of_perfection_cdr( p.azerite_essence.vision_of_perfection );
   }
 };
@@ -387,8 +385,6 @@ struct summon_mindbender_t final : public summon_pet_t
     parse_options( options_str );
     harmful            = false;
     summoning_duration = data().duration();
-    cooldown           = p.cooldowns.mindbender;
-    cooldown->duration = data().cooldown();
     cooldown->duration *= 1.0 + azerite::vision_of_perfection_cdr( p.azerite_essence.vision_of_perfection );
   }
 };
@@ -475,67 +471,6 @@ using namespace unique_gear;
 
 void init()
 {
-  // Priest Leyshock's Grand Compendium basic hooks
-
-  // Haste
-  // Dark Void
-  expansion::bfa::register_leyshocks_trigger( 263346, STAT_HASTE_RATING );
-  // Dispersion
-  expansion::bfa::register_leyshocks_trigger( 47585, STAT_HASTE_RATING );
-  // Void Torrent
-  expansion::bfa::register_leyshocks_trigger( 263165, STAT_HASTE_RATING );
-  // Mind Bomb
-  expansion::bfa::register_leyshocks_trigger( 205369, STAT_HASTE_RATING );
-  // Holy Nova
-  expansion::bfa::register_leyshocks_trigger( 132157, STAT_HASTE_RATING );
-  // Angelic Feather
-  expansion::bfa::register_leyshocks_trigger( 121536, STAT_HASTE_RATING );
-  // Smite
-  expansion::bfa::register_leyshocks_trigger( 585, STAT_HASTE_RATING );
-
-  // Critical Strike
-  // Psychic Horror
-  expansion::bfa::register_leyshocks_trigger( 64044, STAT_CRIT_RATING );
-  // Void Eruption
-  expansion::bfa::register_leyshocks_trigger( 228260, STAT_CRIT_RATING );
-  // Dispel Magic
-  expansion::bfa::register_leyshocks_trigger( 528, STAT_CRIT_RATING );
-  // Holy Word: Chastise
-  expansion::bfa::register_leyshocks_trigger( 88625, STAT_CRIT_RATING );
-  // Halo
-  expansion::bfa::register_leyshocks_trigger( 120517, STAT_CRIT_RATING );
-
-  // Mastery
-  // Vampiric Embrace
-  expansion::bfa::register_leyshocks_trigger( 15286, STAT_MASTERY_RATING );
-  // Psychic Scream
-  expansion::bfa::register_leyshocks_trigger( 8122, STAT_MASTERY_RATING );
-  // Fade
-  expansion::bfa::register_leyshocks_trigger( 586, STAT_MASTERY_RATING );
-  // Purify Disease
-  expansion::bfa::register_leyshocks_trigger( 213634, STAT_MASTERY_RATING );
-  // Divine Star
-  expansion::bfa::register_leyshocks_trigger( 110744, STAT_MASTERY_RATING );
-  // Holy Fire
-  expansion::bfa::register_leyshocks_trigger( 14914, STAT_MASTERY_RATING );
-  // Halo
-  expansion::bfa::register_leyshocks_trigger( 120517, STAT_MASTERY_RATING );
-
-  // Versatility
-  // Mind Flay
-  expansion::bfa::register_leyshocks_trigger( 15407, STAT_VERSATILITY_RATING );
-  // Shadow Mend
-  expansion::bfa::register_leyshocks_trigger( 186263, STAT_VERSATILITY_RATING );
-  // Shadow Word: Death
-  expansion::bfa::register_leyshocks_trigger( 32379, STAT_VERSATILITY_RATING );
-  // Silence
-  expansion::bfa::register_leyshocks_trigger( 15487, STAT_VERSATILITY_RATING );
-  // Surrender to Madness
-  expansion::bfa::register_leyshocks_trigger( 193223, STAT_VERSATILITY_RATING );
-  // Dark Ascension
-  expansion::bfa::register_leyshocks_trigger( 280711, STAT_VERSATILITY_RATING );
-  // Apotheosis
-  expansion::bfa::register_leyshocks_trigger( 200183, STAT_VERSATILITY_RATING );
 }
 
 }  // namespace items
@@ -562,7 +497,7 @@ void base_fiend_pet_t::init_action_list()
   priest_pet_t::init_action_list();
 }
 
-action_t* base_fiend_pet_t::create_action( const std::string& name, const std::string& options_str )
+action_t* base_fiend_pet_t::create_action( util::string_view name, const std::string& options_str )
 {
   return priest_pet_t::create_action( name, options_str );
 }
@@ -577,6 +512,7 @@ priest_td_t::priest_td_t( player_t* target, priest_t& p ) : actor_target_data_t(
 {
   dots.shadow_word_pain = target->get_dot( "shadow_word_pain", &p );
   dots.vampiric_touch   = target->get_dot( "vampiric_touch", &p );
+  dots.devouring_plague = target->get_dot( "devouring_plague", &p );
 
   buffs.schism = make_buff( *this, "schism", p.talents.schism );
 
@@ -622,6 +558,7 @@ priest_t::priest_t( sim_t* sim, util::string_view name, race_e r )
     azerite(),
     azerite_essence(),
     legendary(),
+    conduit(),
     insanity( *this )
 {
   create_cooldowns();
@@ -636,14 +573,12 @@ priest_t::priest_t( sim_t* sim, util::string_view name, race_e r )
 void priest_t::create_cooldowns()
 {
   cooldowns.chakra             = get_cooldown( "chakra" );
-  cooldowns.mindbender         = get_cooldown( "mindbender" );
   cooldowns.penance            = get_cooldown( "penance" );
   cooldowns.apotheosis         = get_cooldown( "apotheosis " );
   cooldowns.holy_fire          = get_cooldown( "holy_fire" );
   cooldowns.holy_word_chastise = get_cooldown( "holy_word_chastise" );
   cooldowns.holy_word_serenity = get_cooldown( "holy_word_serenity" );
   cooldowns.power_word_shield  = get_cooldown( "power_word_shield" );
-  cooldowns.shadowfiend        = get_cooldown( "shadowfiend" );
   cooldowns.silence            = get_cooldown( "silence" );
   cooldowns.mind_blast         = get_cooldown( "mind_blast" );
   cooldowns.void_bolt          = get_cooldown( "void_bolt" );
@@ -651,6 +586,8 @@ void priest_t::create_cooldowns()
   cooldowns.psychic_horror     = get_cooldown( "psychic_horror" );
   cooldowns.dark_ascension     = get_cooldown( "dark_ascension" );
   cooldowns.power_infusion     = get_cooldown( "power_infusion" );
+  cooldowns.shadow_word_death  = get_cooldown( "shadow_word_death" );
+  cooldowns.devouring_plague   = get_cooldown( "devouring_plague" );
 
   if ( specialization() == PRIEST_DISCIPLINE )
   {
@@ -689,7 +626,9 @@ void priest_t::create_gains()
   gains.insanity_dark_void                     = get_gain( "Insanity Gained from Dark Void" );
   gains.insanity_lucid_dreams                  = get_gain( "Insanity Gained from Lucid Dreams" );
   gains.insanity_memory_of_lucid_dreams        = get_gain( "Insanity Gained from Memory of Lucid Dreams" );
+  gains.insanity_death_and_madness             = get_gain( "Insanity Gained from Death and Madness" );
   gains.shadow_word_death_self_damage          = get_gain( "Shadow Word: Death self inflicted damage" );
+  gains.insanity_lost_devouring_plague         = get_gain( "Insanity spent on Devouring Plague" );
 }
 
 /** Construct priest procs */
@@ -768,7 +707,7 @@ stat_e priest_t::convert_hybrid_stat( stat_e s ) const
   }
 }
 
-std::unique_ptr<expr_t> priest_t::create_expression( const std::string& name_str )
+std::unique_ptr<expr_t> priest_t::create_expression( util::string_view name_str )
 {
   auto shadow_expression = create_expression_shadow( name_str );
   if ( shadow_expression )
@@ -885,7 +824,7 @@ double priest_t::matching_gear_multiplier( attribute_e attr ) const
   return 0.0;
 }
 
-action_t* priest_t::create_action( const std::string& name, const std::string& options_str )
+action_t* priest_t::create_action( util::string_view name, const std::string& options_str )
 {
   using namespace actions::spells;
   using namespace actions::heals;
@@ -959,7 +898,7 @@ action_t* priest_t::create_action( const std::string& name, const std::string& o
   return base_t::create_action( name, options_str );
 }
 
-pet_t* priest_t::create_pet( const std::string& pet_name, const std::string& /* pet_type */ )
+pet_t* priest_t::create_pet( util::string_view pet_name, util::string_view /* pet_type */ )
 {
   // pet_t* p = find_pet( pet_name );
 
@@ -1097,6 +1036,13 @@ void priest_t::init_spells()
   // runeforge legendary
   legendary.kiss_of_death    = find_runeforge_legendary( "Kiss of Death" );
   legendary.the_penitent_one = find_runeforge_legendary( "The Penitent One" );
+
+  // Shadow Legendaries
+  legendary.painbreaker_psalm = find_runeforge_legendary( "Painbreaker Psalm" );
+  legendary.shadowflame_prism = find_runeforge_legendary( "Shadowflame Prism" );
+  
+  // Shadow Conduits
+  // conduit.mind_devourer = find_conduit( "Mind Devourer" );
 }
 
 void priest_t::create_buffs()
@@ -1194,6 +1140,7 @@ void priest_t::apply_affecting_auras( action_t& action )
   action.apply_affecting_aura( specs.holy_priest );
   action.apply_affecting_aura( specs.discipline_priest );
   action.apply_affecting_aura( legendary.kiss_of_death );
+  action.apply_affecting_aura( legendary.shadowflame_prism );  // Applies CD reduction
 }
 
 /// ALL Spec Pre-Combat Action Priority List
@@ -1248,46 +1195,28 @@ void priest_t::create_apl_precombat()
   }
 }
 
+// TODO: Adjust these with new consumables in Shadowlands
 std::string priest_t::default_potion() const
 {
-  std::string lvl120_potion = ( specialization() == PRIEST_SHADOW ) ? "unbridled_fury" : "battle_potion_of_intellect";
+  std::string lvl60_potion = ( specialization() == PRIEST_SHADOW ) ? "unbridled_fury" : "battle_potion_of_intellect";
+  std::string lvl50_potion = ( specialization() == PRIEST_SHADOW ) ? "unbridled_fury" : "battle_potion_of_intellect";
 
-  return ( true_level > 110 )
-             ? lvl120_potion
-             : ( true_level >= 100 )
-                   ? "prolonged_power"
-                   : ( true_level >= 90 )
-                         ? "draenic_intellect"
-                         : ( true_level >= 85 ) ? "jade_serpent" : ( true_level >= 80 ) ? "volcanic" : "disabled";
+  return ( true_level > 50 ) ? lvl60_potion : lvl50_potion;
 }
 
 std::string priest_t::default_flask() const
 {
-  return ( true_level > 110 )
-             ? "greater_flask_of_endless_fathoms"
-             : ( true_level >= 100 )
-                   ? "whispered_pact"
-                   : ( true_level >= 90 )
-                         ? "greater_draenic_intellect_flask"
-                         : ( true_level >= 85 ) ? "warm_sun" : ( true_level >= 80 ) ? "draconic_mind" : "disabled";
+  return ( true_level > 50 ) ? "greater_flask_of_endless_fathoms" : "greater_flask_of_endless_fathoms";
 }
 
 std::string priest_t::default_food() const
 {
-  return ( true_level > 110 )
-             ? "baked_port_tato"
-             : ( true_level > 100 )
-                   ? "azshari_salad"
-                   : ( true_level > 90 )
-                         ? "buttered_sturgeon"
-                         : ( true_level >= 90 ) ? "mogu_fish_stew"
-                                                : ( true_level >= 80 ) ? "seafood_magnifique_feast" : "disabled";
+  return ( true_level > 50 ) ? "baked_port_tato" : "baked_port_tato";
 }
 
 std::string priest_t::default_rune() const
 {
-  return ( true_level >= 120 ) ? "battle_scarred"
-                               : ( true_level >= 110 ) ? "defiled" : ( true_level >= 100 ) ? "focus" : "disabled";
+  return ( true_level > 50 ) ? "battle_scarred" : "battle_scarred";
 }
 
 /** NO Spec Combat Action Priority List */

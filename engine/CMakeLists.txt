@@ -40,6 +40,9 @@ if(NOT SC_NO_NETWORKING)
     endif()
 endif()
 
+# Require /permissive- when building with Visual Studio
+target_compile_options(engine PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/permissive->)
+
 ### Git Hash ###
 # Get the current working branch
 execute_process(
@@ -56,5 +59,5 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 target_compile_definitions(engine PUBLIC "SC_GIT_REV=\"${GIT_COMMIT_HASH}\"" "SC_GIT_BRANCH=\"${GIT_BRANCH}\"")
-add_custom_target(update_git_info ALL DEPENDS util/git_info.cpp)
+add_custom_target(update_git_info DEPENDS util/git_info.cpp) 
 add_dependencies(engine update_git_info)

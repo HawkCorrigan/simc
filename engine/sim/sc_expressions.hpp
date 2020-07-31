@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "sc_timespan.hpp"
+#include "util/span.hpp"
 #include "util/string_view.hpp"
 
 struct action_t;
@@ -30,6 +31,7 @@ enum token_e
   TOK_MINUS,
   TOK_MULT,
   TOK_DIV,
+  TOK_MOD,
   TOK_ADD,
   TOK_SUB,
   TOK_AND,
@@ -62,14 +64,10 @@ struct expr_token_t
   std::string label;
 };
 
-int precedence( token_e );
 bool is_unary( token_e );
 bool is_binary( token_e );
-token_e next_token( action_t* action, const std::string& expr_str,
-                    int& current_index, std::string& token_str,
-                    token_e prev_token );
 std::vector<expr_token_t> parse_tokens( action_t* action,
-                                        const std::string& expr_str );
+                                        util::string_view expr_str );
 void print_tokens( std::vector<expr_token_t>& tokens, sim_t* sim );
 void convert_to_unary( std::vector<expr_token_t>& tokens );
 bool convert_to_rpn( std::vector<expr_token_t>& tokens );
@@ -144,7 +142,7 @@ public:
     return static_cast<double>( t );
   }
 
-  static std::unique_ptr<expr_t> parse( action_t*, const std::string& expr_str,
+  static std::unique_ptr<expr_t> parse( action_t*, util::string_view expr_str,
                         bool optimize = false );
   template<class T>
   static std::unique_ptr<expr_t> create_constant( util::string_view name, T value );

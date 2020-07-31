@@ -569,7 +569,7 @@ public:
   void apl_prot();
   void init_action_list() override;
 
-  action_t* create_action( const std::string& name, const std::string& options ) override;
+  action_t* create_action( util::string_view name, const std::string& options ) override;
   void activate() override;
   resource_e primary_resource() const override
   {
@@ -583,6 +583,7 @@ public:
   void target_mitigation( school_e, result_amount_type, action_state_t* ) override;
   void copy_from( player_t* ) override;
   void merge( player_t& ) override;
+  void apply_affecting_auras( action_t& action ) override;
 
   void datacollection_begin() override;
   void datacollection_end() override;
@@ -657,7 +658,7 @@ public:
   simple_sample_data_with_min_max_t *cd_wasted_exec, *cd_wasted_cumulative;
   simple_sample_data_t* cd_wasted_iter;
   bool initialized;
-  warrior_action_t( const std::string& n, warrior_t* player, const spell_data_t* s = spell_data_t::nil() )
+  warrior_action_t( util::string_view n, warrior_t* player, const spell_data_t* s = spell_data_t::nil() )
     : ab( n, player, s ),
       tactician_per_rage( 0 ),
       track_cd_waste( s->cooldown() > timespan_t::zero() || s->charge_cooldown() > timespan_t::zero() ),
@@ -1040,7 +1041,7 @@ struct warrior_heal_t : public warrior_action_t<heal_t>
 
 struct warrior_spell_t : public warrior_action_t<spell_t>
 {  // Main Warrior Spell Class - Used for spells that deal no damage, usually buffs.
-  warrior_spell_t( const std::string& n, warrior_t* p, const spell_data_t* s = spell_data_t::nil() ) : base_t( n, p, s )
+  warrior_spell_t( util::string_view n, warrior_t* p, const spell_data_t* s = spell_data_t::nil() ) : base_t( n, p, s )
   {
     may_miss = may_glance = may_block = may_dodge = may_parry = may_crit = false;
   }
@@ -4602,7 +4603,7 @@ struct taunt_t : public warrior_spell_t
 
 // warrior_t::create_action  ================================================
 
-action_t* warrior_t::create_action( const std::string& name, const std::string& options_str )
+action_t* warrior_t::create_action( util::string_view name, const std::string& options_str )
 {
   if ( name == "auto_attack" )
     return new auto_attack_t( this, options_str );
@@ -6947,6 +6948,15 @@ void warrior_t::copy_from( player_t* source )
   warrior_fixed_time    = p->warrior_fixed_time;
   into_the_fray_friends = p->into_the_fray_friends;
   never_surrender_percentage = p -> never_surrender_percentage;
+}
+
+void warrior_t::apply_affecting_auras( action_t& action )
+{
+  player_t::apply_affecting_auras( action );
+
+  action.apply_affecting_aura( spec.arms_warrior );
+  action.apply_affecting_aura( spec.fury_warrior );
+  action.apply_affecting_aura( spec.prot_warrior );
 }
 
 /* Report Extension Class

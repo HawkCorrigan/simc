@@ -55,6 +55,7 @@ public:
   {
     propagate_const<dot_t*> shadow_word_pain;
     propagate_const<dot_t*> vampiric_touch;
+    propagate_const<dot_t*> devouring_plague;
   } dots;
 
   struct buffs_t
@@ -114,6 +115,8 @@ public:
     propagate_const<buff_t*> vampiric_embrace;
     propagate_const<buff_t*> void_torrent;
     propagate_const<buff_t*> voidform;
+    propagate_const<buff_t*> death_and_madness_debuff;
+    propagate_const<buff_t*> death_and_madness_buff;
 
     // Azerite Powers
     // Shadow
@@ -123,6 +126,9 @@ public:
 
     // Runeforge Legendary
     propagate_const<buff_t*> the_penitent_one;
+
+    // Conduits
+    propagate_const<buff_t*> mind_devourer;
 
   } buffs;
 
@@ -206,7 +212,7 @@ public:
     const spell_data_t* psychic_horror;  // NYI
     // T75
     const spell_data_t* auspicious_spirits;
-    const spell_data_t* death_and_madness;  // NYI
+    const spell_data_t* death_and_madness;
     const spell_data_t* shadow_crash;
     // T90
     const spell_data_t* lingering_insanity;
@@ -267,10 +273,8 @@ public:
 
     // Discipline
     propagate_const<cooldown_t*> chakra;
-    propagate_const<cooldown_t*> mindbender;
     propagate_const<cooldown_t*> penance;
     propagate_const<cooldown_t*> power_word_shield;
-    propagate_const<cooldown_t*> shadowfiend;
     propagate_const<cooldown_t*> silence;
 
     // Shadow
@@ -279,6 +283,8 @@ public:
     propagate_const<cooldown_t*> mind_bomb;
     propagate_const<cooldown_t*> psychic_horror;
     propagate_const<cooldown_t*> dark_ascension;
+    propagate_const<cooldown_t*> shadow_word_death;
+    propagate_const<cooldown_t*> devouring_plague;
 
     // Holy
     propagate_const<cooldown_t*> holy_word_chastise;
@@ -320,6 +326,8 @@ public:
     propagate_const<gain_t*> insanity_lucid_dreams;
     propagate_const<gain_t*> insanity_memory_of_lucid_dreams;
     propagate_const<gain_t*> shadow_word_death_self_damage;
+    propagate_const<gain_t*> insanity_death_and_madness;
+    propagate_const<gain_t*> insanity_lost_devouring_plague;
   } gains;
 
   // Benefits
@@ -405,7 +413,14 @@ public:
   {
     const spell_data_t* kiss_of_death;
     const spell_data_t* the_penitent_one;  // Effect implemented, but not hooked up the PW:Radiance
+    const spell_data_t* painbreaker_psalm;
+    const spell_data_t* shadowflame_prism; // TODO: Add 20% damage modifier
   } legendary;
+
+  struct
+  {
+    const spell_data_t* mind_devourer;
+  } conduit;
 
   struct insanity_end_event_t;
 
@@ -420,8 +435,8 @@ public:
   void reset() override;
   void create_options() override;
   std::string create_profile( save_e ) override;
-  action_t* create_action( const std::string& name, const std::string& options ) override;
-  pet_t* create_pet( const std::string& name, const std::string& type = std::string() ) override;
+  action_t* create_action( util::string_view name, const std::string& options ) override;
+  pet_t* create_pet( util::string_view name, util::string_view type = "") override;
   void create_pets() override;
   void copy_from( player_t* source ) override;
   resource_e primary_resource() const override
@@ -443,7 +458,7 @@ public:
   void combat_begin() override;
   void init_rng() override;
   priest_td_t* get_target_data( player_t* target ) const override;
-  std::unique_ptr<expr_t> create_expression( const std::string& name_str ) override;
+  std::unique_ptr<expr_t> create_expression( util::string_view name_str ) override;
   void arise() override;
   void vision_of_perfection_proc() override;
   void do_dynamic_regen() override;
@@ -729,7 +744,7 @@ struct base_fiend_pet_t : public priest_pet_t
     resources.current = resources.max = resources.initial;
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override;
+  action_t* create_action( util::string_view name, const std::string& options_str ) override;
 };
 
 struct shadowfiend_pet_t final : public base_fiend_pet_t
@@ -1173,12 +1188,12 @@ struct priest_spell_t : public priest_action_t<spell_t>
     double amount = s->result_amount;
     amount *= priest().buffs.vampiric_embrace->data().effectN( 1 ).percent();  // FIXME additive or multiplicate?
 
-    // Get all non-pet, non-sleeping players
-    std::vector<player_t*> ally_list;
-    range::remove_copy_if( sim->player_no_pet_list.data(), back_inserter( ally_list ), player_t::_is_sleeping );
-
-    for ( player_t* ally : ally_list )
+    for ( player_t* ally : sim->player_no_pet_list )
     {
+      if (ally -> current.sleeping )
+      {
+        continue;
+      }
       ally->resource_gain( RESOURCE_HEALTH, amount, ally->gains.vampiric_embrace );
 
       for ( pet_t* pet : ally->pet_list )
@@ -1309,34 +1324,7 @@ struct priest_module_t final : public module_t
   }
   void register_hotfixes() const override
   {
-    /** December 5th 2017 hotfixes
-
-    hotfix::register_effect("Priest", "2017-12-05", "Shadow Priest damage increased by 3%", 191068)
-    .field("base_value")
-    .operation(hotfix::HOTFIX_SET)
-    .modifier(23.0)
-    .verification_value(20.0);
-
-    hotfix::register_effect("Priest", "2017-12-05", "Shadow Priest damage increased by 3%", 179717)
-    .field("base_value")
-    .operation(hotfix::HOTFIX_SET)
-    .modifier(23.0)
-    .verification_value(20.0);
-
-    hotfix::register_effect("Priest", "2017-12-05", "Vampiric Touch damage reduced by 15%.", 25010)
-    .field("sp_coefficient")
-    .operation(hotfix::HOTFIX_SET)
-    .modifier(0.579)
-    .verification_value(0.6816);
-
-    hotfix::register_effect("Priest", "2017-12-05", "Shadow Word: Pain damage reduced by 15%.", 254257)
-    .field("sp_coefficient")
-    .operation(hotfix::HOTFIX_SET)
-    .modifier(0.31)
-    .verification_value(0.365);
-    **/
   }
-
   void combat_begin( sim_t* ) const override
   {
   }

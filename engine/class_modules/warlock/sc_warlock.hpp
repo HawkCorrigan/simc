@@ -435,8 +435,8 @@ namespace warlock
       void      vision_of_perfection_proc_aff();
       void      vision_of_perfection_proc_demo();
       void      darkglare_extension_helper( warlock_t* p, timespan_t darkglare_extension );
-      action_t* create_action( const std::string& name, const std::string& options ) override;
-      pet_t*    create_pet( const std::string& name, const std::string& type = std::string() ) override;
+      action_t* create_action( util::string_view name, const std::string& options ) override;
+      pet_t*    create_pet( util::string_view name, util::string_view type = "" ) override;
       void      create_pets() override;
       std::string      create_profile( save_e ) override;
       void      copy_from( player_t* source ) override;
@@ -460,11 +460,12 @@ namespace warlock
       void      halt() override;
       void      combat_begin() override;
       void      init_assessors() override;
-      std::unique_ptr<expr_t> create_expression( const std::string& name_str ) override;
+      std::unique_ptr<expr_t> create_expression( util::string_view name_str ) override;
       std::string       default_potion() const override;
       std::string       default_flask() const override;
       std::string       default_food() const override;
       std::string       default_rune() const override;
+      void apply_affecting_auras( action_t& action ) override;
 
 
       target_specific_t<warlock_td_t> target_data;
@@ -480,7 +481,7 @@ namespace warlock
       }
 
       // sc_warlock_affliction
-      action_t* create_action_affliction( const std::string& action_name, const std::string& options_str );
+      action_t* create_action_affliction( util::string_view action_name, const std::string& options_str );
       void create_buffs_affliction();
       void init_spells_affliction();
       void init_gains_affliction();
@@ -488,10 +489,10 @@ namespace warlock
       void init_procs_affliction();
       void create_options_affliction();
       void create_apl_affliction();
-      std::unique_ptr<expr_t>   create_aff_expression(const std::string& name_str);
+      std::unique_ptr<expr_t>   create_aff_expression(util::string_view name_str);
 
       // sc_warlock_demonology
-      action_t* create_action_demonology( const std::string& action_name, const std::string& options_str );
+      action_t* create_action_demonology( util::string_view action_name, const std::string& options_str );
       void create_buffs_demonology();
       void init_spells_demonology();
       void init_gains_demonology();
@@ -501,7 +502,7 @@ namespace warlock
       void create_apl_demonology();
 
       // sc_warlock_destruction
-      action_t* create_action_destruction( const std::string& action_name, const std::string& options_str );
+      action_t* create_action_destruction( util::string_view action_name, const std::string& options_str );
       void create_buffs_destruction();
       void init_spells_destruction();
       void init_gains_destruction();
@@ -511,10 +512,10 @@ namespace warlock
       void create_apl_destruction();
 
       // sc_warlock_pets
-      pet_t* create_main_pet(const std::string& pet_name, const std::string& options_str);
-      pet_t* create_demo_pet(const std::string& pet_name, const std::string& options_str);
+      pet_t* create_main_pet(util::string_view pet_name, util::string_view pet_type);
+      pet_t* create_demo_pet(util::string_view pet_name, util::string_view pet_type);
       void   create_all_pets();
-      std::unique_ptr<expr_t> create_pet_expression(const std::string& name_str);
+      std::unique_ptr<expr_t> create_pet_expression(util::string_view name_str);
 
     private:
       void apl_precombat();
@@ -548,17 +549,17 @@ namespace warlock
       public:
         gain_t * gain;
 
-        warlock_spell_t( warlock_t* p, const std::string& n ) :
+        warlock_spell_t( warlock_t* p, util::string_view n ) :
           warlock_spell_t( n, p, p -> find_class_spell( n ) )
         {
         }
 
-        warlock_spell_t( warlock_t* p, const std::string& n, specialization_e s ) :
+        warlock_spell_t( warlock_t* p, util::string_view n, specialization_e s ) :
           warlock_spell_t( n, p, p -> find_class_spell( n, s ) )
         {
         }
 
-        warlock_spell_t( const std::string& token, warlock_t* p, const spell_data_t* s = spell_data_t::nil() ) :
+        warlock_spell_t( util::string_view token, warlock_t* p, const spell_data_t* s = spell_data_t::nil() ) :
           spell_t( token, p, s )
         {
           may_crit = true;
@@ -589,38 +590,6 @@ namespace warlock
         void reset() override
         {
           spell_t::reset();
-        }
-
-        void init() override
-        {
-          action_t::init();
-
-          if ( p()->specialization() == WARLOCK_AFFLICTION )
-          {
-            if ( data().affected_by( p()->spec.affliction->effectN( 1 ) ) )
-              base_dd_multiplier *= 1.0 + p()->spec.affliction->effectN( 1 ).percent();
-
-            if ( data().affected_by( p()->spec.affliction->effectN( 2 ) ) )
-              base_td_multiplier *= 1.0 + p()->spec.affliction->effectN( 2 ).percent();
-          }
-
-          if ( p()->specialization() == WARLOCK_DEMONOLOGY )
-          {
-            if ( data().affected_by( p()->spec.demonology->effectN( 1 ) ) )
-              base_dd_multiplier *= 1.0 + p()->spec.demonology->effectN( 1 ).percent();
-
-            if ( data().affected_by( p()->spec.demonology->effectN( 2 ) ) )
-              base_td_multiplier *= 1.0 + p()->spec.demonology->effectN( 2 ).percent();
-          }
-
-          if ( p()->specialization() == WARLOCK_DESTRUCTION )
-          {
-            if ( data().affected_by( p()->spec.destruction->effectN( 1 ) ) )
-              base_dd_multiplier *= 1.0 + p()->spec.destruction->effectN( 1 ).percent();
-
-            if ( data().affected_by( p()->spec.destruction->effectN( 2 ) ) )
-              base_td_multiplier *= 1.0 + p()->spec.destruction->effectN( 2 ).percent();
-          }
         }
 
         double cost() const override
@@ -714,7 +683,7 @@ namespace warlock
           }
         }
 
-        std::unique_ptr<expr_t> create_expression(const std::string& name_str) override
+        std::unique_ptr<expr_t> create_expression(util::string_view name_str) override
         {
           if (name_str == "target_uas")
           {

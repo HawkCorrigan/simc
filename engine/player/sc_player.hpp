@@ -35,6 +35,7 @@ struct actor_target_data_t;
 struct attack_t;
 class azerite_essence_t;
 class azerite_power_t;
+class conduit_data_t;
 class dbc_t;
 struct benefit_t;
 struct item_t;
@@ -75,6 +76,9 @@ namespace report {
 }
 namespace js {
     struct JsonOutput;
+}
+namespace covenant {
+  class covenant_state_t;
 }
 
 /* Player Report Extension
@@ -185,11 +189,14 @@ struct player_t : public actor_t
   /// Azerite essence state object
   std::unique_ptr<azerite::azerite_essence_state_t> azerite_essence;
 
+  /// Covenant state object
+  std::unique_ptr<covenant::covenant_state_t> covenant;
+
   // TODO: FIXME, these stats should not be increased by scale factor deltas
   struct base_initial_current_t
   {
     base_initial_current_t();
-    std::string to_string();
+
     gear_stats_t stats;
 
     double spell_power_per_intellect, spell_power_per_attack_power, spell_crit_per_intellect;
@@ -211,6 +218,8 @@ struct player_t : public actor_t
     std::array<double, ATTRIBUTE_MAX> attribute_multiplier;
     double spell_power_multiplier, attack_power_multiplier, base_armor_multiplier, armor_multiplier;
     position_e position;
+
+    friend void format_to( const base_initial_current_t&, fmt::format_context::iterator );
   }
   base, // Base values, from some database or overridden by user
   initial, // Base + Passive + Gear (overridden or items) + Player Enchants + Global Enchants
@@ -718,11 +727,15 @@ public:
   azerite_essence_t find_azerite_essence( util::string_view name, bool tokenized = false ) const;
   azerite_essence_t find_azerite_essence( unsigned power_id ) const;
 
-  item_runeforge_t find_runeforge_legendary( const std::string& name ) const;
+  item_runeforge_t find_runeforge_legendary( util::string_view name ) const;
+
+  conduit_data_t find_conduit_spell( util::string_view name ) const;
+  const spell_data_t* find_soulbind_spell( util::string_view name ) const;
+  const spell_data_t* find_covenant_spell( util::string_view name ) const;
 
   const spell_data_t* find_racial_spell( util::string_view name, race_e s = RACE_NONE ) const;
   const spell_data_t* find_class_spell( util::string_view name, specialization_e s = SPEC_NONE ) const;
-  const spell_data_t* find_rank_spell( util::string_view name, util::string_view desc ) const;
+  const spell_data_t* find_rank_spell( util::string_view name, util::string_view desc, specialization_e s = SPEC_NONE ) const;
   const spell_data_t* find_pet_spell( util::string_view name ) const;
   const spell_data_t* find_talent_spell( util::string_view name, specialization_e s = SPEC_NONE, bool name_tokenized = false, bool check_validity = true ) const;
   const spell_data_t* find_specialization_spell( util::string_view name, specialization_e s = SPEC_NONE ) const;
@@ -768,7 +781,7 @@ public:
   // Virtual methods
   virtual void invalidate_cache( cache_e c );
   virtual void init();
-  virtual void override_talent( std::string& override_str );
+  virtual void override_talent( util::string_view override_str );
   virtual void init_meta_gem();
   virtual void init_resources( bool force = false );
   virtual std::string init_use_item_actions( const std::string& append = std::string() );
@@ -987,9 +1000,9 @@ public:
   virtual void  summon_pet( util::string_view name, timespan_t duration = timespan_t::zero() );
   virtual void dismiss_pet( util::string_view name );
 
-  virtual std::unique_ptr<expr_t> create_expression( const std::string& name );
-  virtual std::unique_ptr<expr_t> create_action_expression( action_t&, const std::string& name );
-  virtual std::unique_ptr<expr_t> create_resource_expression( const std::string& name );
+  virtual std::unique_ptr<expr_t> create_expression( util::string_view name );
+  virtual std::unique_ptr<expr_t> create_action_expression( action_t&, util::string_view name );
+  virtual std::unique_ptr<expr_t> create_resource_expression( util::string_view name );
 
   virtual void create_options();
   void recreate_talent_str( talent_format format = talent_format::NUMBERS );
@@ -997,9 +1010,9 @@ public:
 
   virtual void copy_from( player_t* source );
 
-  virtual action_t* create_action( const std::string& name, const std::string& options );
+  virtual action_t* create_action( util::string_view name, const std::string& options );
   virtual void      create_pets() { }
-  virtual pet_t*    create_pet( const std::string& /* name*/,  const std::string& /* type */ = std::string() ) { return nullptr; }
+  virtual pet_t*    create_pet( util::string_view name,  util::string_view type = "" );
 
   virtual void armory_extensions( const std::string& /* region */, const std::string& /* server */, const std::string& /* character */,
                                   cache::behavior_e /* behavior */ = cache::players() )

@@ -961,6 +961,7 @@ void print_html_action_info( report::sc_html_stream& os, unsigned stats_mask, co
                  "<li><span class=\"label\">secondary_cost:</span>%.1f</li>\n"
                  "<li><span class=\"label\">cooldown:</span>%.3f</li>\n"
                  "<li><span class=\"label\">cooldown hasted:</span>%s</li>\n"
+                 "<li><span class=\"label\">base_recharge_multiplier:</span>%.3f</li>\n"
                  "<li><span class=\"label\">base_execute_time:</span>%.2f</li>\n"
                  "<li><span class=\"label\">base_crit:</span>%.2f</li>\n"
                  "<li><span class=\"label\">target:</span>%s</li>\n"
@@ -980,6 +981,7 @@ void print_html_action_info( report::sc_html_stream& os, unsigned stats_mask, co
                  a->secondary_costs[ a->current_resource() ],
                  a->cooldown->duration.total_seconds(),
                  a->cooldown->hasted ? "true" : "false",
+                 a->base_recharge_multiplier,
                  a->base_execute_time.total_seconds(),
                  a->base_crit,
                  a->target ? util::encode_html( a->target->name() ).c_str() : "",
@@ -3791,32 +3793,27 @@ void print_html_player_results_spec_gear( report::sc_html_stream& os, const play
       os << "<tr class=\"left\">\n"
          << "<th>Talents</th>\n"
          << "<td><ul class=\"float\">\n";
+      static constexpr std::array<unsigned, MAX_TALENT_ROWS> row_level {{
+        15, 25, 30, 35, 40, 45, 50
+      }};
       for ( uint32_t row = 0; row < MAX_TALENT_ROWS; row++ )
       {
-        for ( uint32_t col = 0; col < MAX_TALENT_COLS; col++ )
+        const int col = p.talent_points.choice( row );
+        if ( col < 0 )
         {
-          const talent_data_t* t = talent_data_t::find( p.type, row, col, p.specialization(), p.dbc->ptr );
-          std::string name = "none";
-          if ( t )
-          {
-            if ( t->spell() )
-              name = report_decorators::decorated_spell_data( *p.sim, t->spell() );
-            else if ( t->name_cstr() )
-              name = util::encode_html( t->name_cstr() );
-
-          // Seems unnecessary...
-          /*if ( t->specialization() != SPEC_NONE )
-            {
-              name += " (";
-              name += util::specialization_string( t->specialization() );
-              name += ")";
-            }*/
-          }
-          if ( p.talent_points.has_row_col( row, col ) )
-            os.printf( "<li><strong>%d</strong>:&#160;%s</li>\n", row == 6 ? 100 : ( row + 1 ) * 15, name.c_str() );
+          os.format( "<li><strong>{}</strong>:&#160;None</li>\n", row_level[ row ] );
+          continue;
         }
-        if ( p.talent_points.choice( row ) == -1 )
-          os.printf( "<li><strong>%d</strong>:&#160;None</li>\n", row == 6 ? 100 : ( row + 1 ) * 15 );
+
+        std::string name = "none";
+        if ( const talent_data_t* t = talent_data_t::find( p.type, row, col, p.specialization(), p.dbc->ptr ) )
+        {
+          if ( t->spell() )
+            name = report_decorators::decorated_spell_data( *p.sim, t->spell() );
+          else if ( t->name_cstr() )
+            name = util::encode_html( t->name_cstr() );
+        }
+        os.format( "<li><strong>{}</strong>:&#160;{}</li>\n", row_level[ row ], name );
       }
       std::string url_string = p.talents_str;
       if ( !util::str_in_str_ci( url_string, "http" ) )

@@ -11,7 +11,7 @@ namespace warlock
     struct drain_life_t : public warlock_spell_t
     {
 
-      drain_life_t( warlock_t* p, const std::string& options_str ) :
+      drain_life_t( warlock_t* p, util::string_view options_str ) :
         warlock_spell_t( p, "Drain Life" )
       {
         parse_options( options_str );
@@ -55,7 +55,7 @@ namespace warlock
     //TOCHECK: Does the damage proc affect Seed of Corruption? If so, this needs to be split into specs as well
     struct grimoire_of_sacrifice_t : public warlock_spell_t
     {
-      grimoire_of_sacrifice_t( warlock_t* p, const std::string& options_str ) :
+      grimoire_of_sacrifice_t( warlock_t* p, util::string_view options_str ) :
         warlock_spell_t( "grimoire_of_sacrifice", p, p -> talents.grimoire_of_sacrifice )
       {
         parse_options( options_str );
@@ -474,7 +474,7 @@ double warlock_t::matching_gear_multiplier( attribute_e attr ) const
   return 0.0;
 }
 
-action_t* warlock_t::create_action( const std::string& action_name, const std::string& options_str )
+action_t* warlock_t::create_action( util::string_view action_name, const std::string& options_str )
 {
   using namespace actions;
 
@@ -517,7 +517,7 @@ action_t* warlock_t::create_action( const std::string& action_name, const std::s
   return player_t::create_action( action_name, options_str );
 }
 
-pet_t* warlock_t::create_pet( const std::string& pet_name, const std::string& pet_type )
+pet_t* warlock_t::create_pet( util::string_view pet_name, util::string_view pet_type )
 {
   pet_t* p = find_pet( pet_name );
   if ( p ) return p;
@@ -1019,7 +1019,7 @@ void warlock_t::vision_of_perfection_proc()
   }
 }
 
-pet_t* warlock_t::create_main_pet(const std::string& pet_name, const std::string& pet_type)
+pet_t* warlock_t::create_main_pet(util::string_view pet_name, util::string_view pet_type)
 {
   pet_t* p = find_pet(pet_name);
   if (p) return p;
@@ -1056,7 +1056,7 @@ void warlock_t::create_all_pets()
   }
 }
 
-std::unique_ptr<expr_t> warlock_t::create_pet_expression(const std::string& name_str)
+std::unique_ptr<expr_t> warlock_t::create_pet_expression(util::string_view name_str)
 {
   if (name_str == "last_cast_imps")
   {
@@ -1080,7 +1080,7 @@ std::unique_ptr<expr_t> warlock_t::create_pet_expression(const std::string& name
   return player_t::create_expression(name_str);
 }
 
-std::unique_ptr<expr_t> warlock_t::create_expression( const std::string& name_str )
+std::unique_ptr<expr_t> warlock_t::create_expression( util::string_view name_str )
 {
   if ( name_str == "time_to_shard" )
   {
@@ -1149,7 +1149,7 @@ std::unique_ptr<expr_t> warlock_t::create_expression( const std::string& name_st
     });
   }
 
-  std::vector<std::string> splits = util::string_split( name_str, "." );
+  auto splits = util::string_split( name_str, "." );
 
   if (splits.size() == 3 && splits[0] == "time_to_imps" && splits[2] == "remains")
   {
@@ -1178,6 +1178,15 @@ std::unique_ptr<expr_t> warlock_t::create_expression( const std::string& name_st
   }
 
   return player_t::create_expression( name_str );
+}
+
+void warlock_t::apply_affecting_auras( action_t& action )
+{
+  player_t::apply_affecting_auras( action );
+
+  action.apply_affecting_aura( spec.demonology );
+  action.apply_affecting_aura( spec.destruction );
+  action.apply_affecting_aura( spec.affliction );
 }
 
 /* Report Extension Class

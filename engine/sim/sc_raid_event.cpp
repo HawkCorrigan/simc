@@ -477,7 +477,7 @@ struct invulnerable_event_t final : public raid_event_t
     parse_options( options_str );
   }
 
-  bool parse_target( sim_t* /* sim */, const std::string& /* name */, const std::string& value )
+  bool parse_target( sim_t* /* sim */, util::string_view /* name */, const std::string& value )
   {
     auto it = range::find_if( sim->target_list, [ &value ]( const player_t* target ) {
       return util::str_compare_ci( value, target->name() );
@@ -1056,12 +1056,12 @@ struct position_event_t : public raid_event_t
   }
 };
 
-std::unique_ptr<expr_t> parse_player_if_expr( player_t& player, const std::string& expr_str )
+std::unique_ptr<expr_t> parse_player_if_expr( player_t& player, util::string_view expr_str )
 {
   if ( expr_str.empty() )
     return nullptr;
 
-  std::vector<expression::expr_token_t> tokens = expression::parse_tokens( nullptr, expr_str );
+  auto tokens = expression::parse_tokens( nullptr, expr_str );
 
   if ( player.sim->debug )
     expression::print_tokens( tokens, player.sim );
@@ -1514,7 +1514,7 @@ void raid_event_t::parse_options( util::string_view options_str )
     return;
 
   opts::parse( sim, type, options, options_str,
-               [ this ]( opts::parse_status status, const std::string& name, const std::string& value ) {
+               [ this ]( opts::parse_status status, util::string_view name, const std::string& value ) {
                  // Fail parsing if strict parsing is used and the option is not found
                  if ( sim->strict_parsing && status == opts::parse_status::NOT_FOUND )
                  {

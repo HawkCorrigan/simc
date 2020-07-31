@@ -899,8 +899,8 @@ public:
   void      target_mitigation( school_e, result_amount_type, action_state_t* ) override;
   void      do_damage( action_state_t* ) override;
   void      create_actions() override;
-  action_t* create_action( const std::string& name, const std::string& options ) override;
-  std::unique_ptr<expr_t>   create_expression( const std::string& name ) override;
+  action_t* create_action( util::string_view name, const std::string& options ) override;
+  std::unique_ptr<expr_t>   create_expression( util::string_view name ) override;
   void      create_options() override;
   void      create_pets() override;
   resource_e primary_resource() const override { return RESOURCE_RUNIC_POWER; }
@@ -915,6 +915,7 @@ public:
   std::string default_flask() const override;
   std::string default_food() const override;
   std::string default_rune() const override;
+  void apply_affecting_auras( action_t& action ) override;
 
   void vision_of_perfection_proc() override;
 
@@ -940,7 +941,7 @@ public:
 
   // Actor is standing in their own Death and Decay or Defile
   bool      in_death_and_decay() const;
-  std::unique_ptr<expr_t>   create_death_and_decay_expression( const std::string& expr_str );
+  std::unique_ptr<expr_t>   create_death_and_decay_expression( util::string_view expr_str );
 
   unsigned  replenish_rune( unsigned n, gain_t* gain = nullptr );
 
@@ -1437,7 +1438,7 @@ struct death_knight_pet_t : public pet_t
     pet_t::init_action_list();
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override;
+  action_t* create_action( util::string_view name, const std::string& options_str ) override;
 
   // DK pets have their own base attack speed
   double composite_melee_speed() const override
@@ -1445,6 +1446,13 @@ struct death_knight_pet_t : public pet_t
 
   virtual attack_t* create_auto_attack()
   { return nullptr; }
+
+  void apply_affecting_auras( action_t& action ) override
+  {
+    player_t::apply_affecting_auras( action );
+
+    o()->apply_affecting_auras(action);
+  }
 };
 
 // ==========================================================================
@@ -1563,7 +1571,7 @@ struct pet_spell_t : public pet_action_t<T_PET, spell_t>
 // Base Death Knight Pet Method Definitions
 // ==========================================================================
 
-action_t* death_knight_pet_t::create_action( const std::string& name,
+action_t* death_knight_pet_t::create_action( util::string_view name,
                                        const std::string& options_str )
 {
   if ( name == "auto_attack" ) return new auto_attack_t( this );
@@ -1767,7 +1775,7 @@ struct ghoul_pet_t : public base_ghoul_pet_t
     // def -> add_action( "Gnaw" ); Unused because it's a dps loss compared to waiting for DT and casting Monstrous Blow
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "claw"           ) return new           claw_t( this, options_str );
     if ( name == "gnaw"           ) return new           gnaw_t( this, options_str );
@@ -1837,7 +1845,7 @@ struct army_ghoul_pet_t : public base_ghoul_pet_t
     }
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "claw" ) return new army_claw_t( this, options_str );
 
@@ -1948,7 +1956,7 @@ struct gargoyle_pet_t : public death_knight_pet_t
     dark_empowerment = make_buff( this, "dark_empowerment", o() -> spell.pet_dark_empowerment );
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "gargoyle_strike" ) return new gargoyle_strike_t( this, options_str );
     if ( name == "travel"          ) return new travel_t( this );
@@ -2023,7 +2031,7 @@ struct risen_skulker_pet_t : public death_knight_pet_t
     def -> add_action( "Skulker Shot" );
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "skulker_shot" ) return new skulker_shot_t( this, options_str );
 
@@ -2095,8 +2103,6 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
     blood_plague_t( dancing_rune_weapon_pet_t* p ) :
       drw_spell_t( p, "blood_plague", p -> o() -> spell.blood_plague )
     {
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 2 ).percent();
-
       // DRW usually behaves the same regardless of talents, but BP ticks are affected by rapid decomposition
       // https://github.com/SimCMinMax/WoW-BugTracker/issues/240
       if ( p -> o() -> bugs )
@@ -2112,8 +2118,6 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
       aoe = -1;
       cooldown -> duration = 0_ms;
       cooldown -> charges = 0;
-
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 1 ).percent();
     }
 
     void impact( action_state_t* s ) override
@@ -2133,7 +2137,6 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
     deaths_caress_t( dancing_rune_weapon_pet_t* p ) :
       drw_spell_t( p, "deaths_caress", p -> o() -> spec.deaths_caress )
     {
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 1 ).percent();
     }
 
     void impact( action_state_t* s ) override
@@ -2154,8 +2157,6 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
       drw_attack_t( p, "death_strike", p -> o() -> spell.death_strike )
     {
       weapon = &( p -> main_hand_weapon );
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 1 ).percent();
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 3 ).percent();
     }
 
     double action_multiplier() const override
@@ -2176,7 +2177,6 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
       drw_attack_t( p, "heart_strike", p -> o() -> spec.heart_strike )
     {
       weapon = &( p -> main_hand_weapon );
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 1 ).percent();
       aoe = 2;
     }
 
@@ -2198,7 +2198,6 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
       drw_attack_t( p, "marrowrend", p -> o() -> spec.marrowrend )
     {
       weapon = &( p -> main_hand_weapon );
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 1 ).percent();
     }
 
     void impact( action_state_t* state ) override
@@ -2217,7 +2216,6 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
       drw_attack_t( p, "rune_strike", p -> o() -> talent.rune_strike )
     {
       weapon = &( p -> main_hand_weapon );
-      base_multiplier *= 1.0 + p -> o() -> spec.blood_death_knight -> effectN( 1 ).percent();
 
       cooldown -> duration = 0_ms;
       cooldown -> charges = 0;
@@ -2406,7 +2404,7 @@ struct magus_pet_t : public death_knight_pet_t
     def -> add_action( "shadow_bolt" );
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "frostbolt" ) return new frostbolt_magus_t( this, options_str );
     if ( name == "shadow_bolt" ) return new shadow_bolt_magus_t( this, options_str );
@@ -2439,7 +2437,7 @@ struct death_knight_action_t : public Base
     bool razorice;
   } affected_by;
 
-  death_knight_action_t( const std::string& n, death_knight_t* p, const spell_data_t* s = spell_data_t::nil() ) :
+  death_knight_action_t( util::string_view n, death_knight_t* p, const spell_data_t* s = spell_data_t::nil() ) :
     action_base_t( n, p, s ), gain( nullptr ),
     hasted_gcd( false ),
     weapon_req( WEAPON_NONE ),
@@ -2459,37 +2457,6 @@ struct death_knight_action_t : public Base
 
       this -> energize_amount += rp_gain;
       this -> base_costs[ RESOURCE_RUNIC_POWER ] = 0;
-    }
-
-    // Spec Auras
-    if ( this -> data().affected_by( p -> spec.unholy_death_knight -> effectN( 1 ) ) && p -> specialization() == DEATH_KNIGHT_UNHOLY )
-    {
-      this -> base_dd_multiplier *= 1.0 + p -> spec.unholy_death_knight -> effectN( 1 ).percent();
-    }
-
-    if ( this -> data().affected_by( p -> spec.unholy_death_knight -> effectN( 2 ) ) && p -> specialization() == DEATH_KNIGHT_UNHOLY )
-    {
-      this -> base_td_multiplier *= 1.0 + p -> spec.unholy_death_knight -> effectN( 2 ).percent();
-    }
-
-    if ( this -> data().affected_by( p -> spec.frost_death_knight -> effectN( 1 ) ) && p -> specialization() == DEATH_KNIGHT_FROST )
-    {
-      this -> base_dd_multiplier *= 1.0 + p -> spec.frost_death_knight -> effectN( 1 ).percent();
-    }
-
-    if ( this -> data().affected_by( p -> spec.frost_death_knight -> effectN( 2 ) ) && p -> specialization() == DEATH_KNIGHT_FROST )
-    {
-      this -> base_td_multiplier *= 1.0 + p -> spec.frost_death_knight -> effectN( 2 ).percent();
-    }
-
-    if ( this -> data().affected_by( p -> spec.blood_death_knight -> effectN( 1 ) ) && p -> specialization() == DEATH_KNIGHT_BLOOD )
-    {
-      this -> base_dd_multiplier *= 1.0 + p -> spec.blood_death_knight -> effectN( 1 ).percent();
-    }
-
-    if ( this -> data().affected_by( p -> spec.blood_death_knight -> effectN( 2 ) ) && p -> specialization() == DEATH_KNIGHT_BLOOD )
-    {
-      this -> base_td_multiplier *= 1.0 + p -> spec.blood_death_knight -> effectN( 2 ).percent();
     }
 
     this -> affected_by.frozen_heart = this -> data().affected_by( p -> mastery.frozen_heart -> effectN( 1 ) );
@@ -2600,7 +2567,7 @@ struct death_knight_action_t : public Base
     return base_gcd;
   }
 
-  std::unique_ptr<expr_t> create_expression( const std::string& name_str ) override
+  std::unique_ptr<expr_t> create_expression( util::string_view name_str ) override
   {
     auto dnd_expr = p() -> create_death_and_decay_expression( name_str );
     if ( dnd_expr )
@@ -2642,7 +2609,7 @@ struct death_knight_melee_attack_t : public death_knight_action_t<melee_attack_t
 
 struct death_knight_spell_t : public death_knight_action_t<spell_t>
 {
-  death_knight_spell_t( const std::string& n, death_knight_t* p,
+  death_knight_spell_t( util::string_view n, death_knight_t* p,
                         const spell_data_t* s = spell_data_t::nil() ) :
     base_t( n, p, s )
   {
@@ -2659,7 +2626,7 @@ struct death_knight_spell_t : public death_knight_action_t<spell_t>
 
 struct death_knight_heal_t : public death_knight_action_t<heal_t>
 {
-  death_knight_heal_t( const std::string& n, death_knight_t* p,
+  death_knight_heal_t( util::string_view n, death_knight_t* p,
                        const spell_data_t* s = spell_data_t::nil() ) :
     base_t( n, p, s )
   { }
@@ -3953,9 +3920,6 @@ struct death_and_decay_base_t : public death_knight_spell_t
     // Note, radius and ground_aoe flag needs to be set in base so spell_targets expression works
     ground_aoe            = true;
     radius                = data().effectN( 1 ).radius_max();
-
-    // Blood has a lower base cd on DnD
-    cooldown -> duration *= 1.0 + p -> spec.blood_death_knight -> effectN( 5 ).percent();
   }
 
   double cost() const override
@@ -4363,7 +4327,6 @@ struct death_strike_t : public death_knight_melee_attack_t
   {
     parse_options( options_str );
     may_parry = false;
-    base_multiplier *= 1.0 + p -> spec.blood_death_knight -> effectN( 3 ).percent();
 
     weapon = &( p -> main_hand_weapon );
 
@@ -6991,7 +6954,7 @@ void death_knight_t::create_actions()
 
 // death_knight_t::create_action  ===========================================
 
-action_t* death_knight_t::create_action( const std::string& name, const std::string& options_str )
+action_t* death_knight_t::create_action( util::string_view name, const std::string& options_str )
 {
   // General Actions
   if ( name == "antimagic_shell"          ) return new antimagic_shell_t          ( this, options_str );
@@ -7055,7 +7018,7 @@ action_t* death_knight_t::create_action( const std::string& name, const std::str
 
 // death_knight_t::create_expression ========================================
 
-std::unique_ptr<expr_t> death_knight_t::create_death_and_decay_expression( const std::string& expr_str )
+std::unique_ptr<expr_t> death_knight_t::create_death_and_decay_expression( util::string_view expr_str )
 {
   auto expr = util::string_split( expr_str, "." );
   if ( expr.size() < 2 || ( expr.size() == 3 && ! util::str_compare_ci( expr[ 0 ], "dot" ) ) )
@@ -7092,7 +7055,7 @@ std::unique_ptr<expr_t> death_knight_t::create_death_and_decay_expression( const
   return nullptr;
 }
 
-std::unique_ptr<expr_t> death_knight_t::create_expression( const std::string& name_str )
+std::unique_ptr<expr_t> death_knight_t::create_expression( util::string_view name_str )
 {
   auto splits = util::string_split( name_str, "." );
 
@@ -7104,7 +7067,7 @@ std::unique_ptr<expr_t> death_knight_t::create_expression( const std::string& na
       auto n = n_char - '0';
       if ( n <= 0 || as<size_t>( n ) > MAX_RUNES )
       {
-        sim -> errorf( "%s invalid expression '%s'.", name(), name_str.c_str() );
+        sim -> error( "{} invalid expression '{}'.", name(), name_str );
         return player_t::create_expression( name_str );
       }
 
@@ -8737,6 +8700,16 @@ void death_knight_t::adjust_dynamic_cooldowns()
   player_t::adjust_dynamic_cooldowns();
 
   _runes.update_coefficient();
+}
+
+void death_knight_t::apply_affecting_auras( action_t& action )
+{
+  player_t::apply_affecting_auras( action );
+
+  action.apply_affecting_aura( spec.death_knight );
+  action.apply_affecting_aura( spec.unholy_death_knight );
+  action.apply_affecting_aura( spec.frost_death_knight );
+  action.apply_affecting_aura( spec.blood_death_knight );
 }
 
 /* Report Extension Class

@@ -494,34 +494,32 @@ action_t::~action_t()
   }
 }
 
-static bool has_direct_damage_effect( const spell_data_t& spell )
+static bool is_direct_damage_effect( const spelleffect_data_t& effect )
 {
   static constexpr effect_type_t types[] = {
     E_HEAL, E_SCHOOL_DAMAGE, E_HEALTH_LEECH,
     E_NORMALIZED_WEAPON_DMG, E_WEAPON_DAMAGE, E_WEAPON_PERCENT_DAMAGE
   };
-  for ( const auto& effect : spell.effects() )
-  {
-    if ( range::contains( types, effect.type() ) )
-      return true;
-  }
-  return false;
+  return range::contains( types, effect.type() );
 }
 
-static bool has_periodic_damage_effect( const spell_data_t& spell )
+static bool is_periodic_damage_effect( const spelleffect_data_t& effect )
 {
   static constexpr effect_subtype_t subtypes[] = {
     A_PERIODIC_DAMAGE, A_PERIODIC_LEECH, A_PERIODIC_HEAL
   };
-  for ( const auto& effect : spell.effects() )
-  {
-    if ( effect.type() == E_APPLY_AURA &&
-         range::contains( subtypes, effect.subtype() ) )
-    {
-      return true;
-    }
-  }
-  return false;
+  return effect.type() == E_APPLY_AURA &&
+         range::contains( subtypes, effect.subtype() );
+}
+
+static bool has_direct_damage_effect( const spell_data_t& spell )
+{
+  return range::any_of( spell.effects(), is_direct_damage_effect );
+}
+
+static bool has_periodic_damage_effect( const spell_data_t& spell )
+{
+  return range::any_of( spell.effects(), is_periodic_damage_effect );
 }
 
 /**
@@ -804,7 +802,7 @@ void action_t::parse_options( util::string_view options_str )
   try
   {
     opts::parse( sim, name(), options, options_str,
-      [ this ]( opts::parse_status status, const std::string& name, const std::string& value ) {
+      [ this ]( opts::parse_status status, util::string_view name, const std::string& value ) {
         // Fail parsing if strict parsing is used and the option is not found
         if ( sim->strict_parsing && status == opts::parse_status::NOT_FOUND )
         {
@@ -2703,7 +2701,7 @@ void action_t::check_spell( const spell_data_t* sp )
   }
 }
 
-std::unique_ptr<expr_t> action_t::create_expression( const std::string& name_str )
+std::unique_ptr<expr_t> action_t::create_expression( util::string_view name_str )
 {
   class action_expr_t : public expr_t
   {
@@ -3110,7 +3108,7 @@ std::unique_ptr<expr_t> action_t::create_expression( const std::string& name_str
     } );
   }
 
-  std::vector<std::string> splits = util::string_split( name_str, "." );
+  auto splits = util::string_split( name_str, "." );
 
   if ( splits.size() == 2 )
   {
@@ -3419,7 +3417,7 @@ std::unique_ptr<expr_t> action_t::create_expression( const std::string& name_str
   {
     // Find target
     player_t* expr_target = nullptr;
-    std::string tail      = name_str.substr( splits[ 0 ].length() + 1 );
+    auto tail      = name_str.substr( splits[ 0 ].length() + 1 );
     if ( util::is_number( splits[ 1 ] ) )
     {
       expr_target = find_target_by_number( std::stoi( splits[ 1 ] ) );
@@ -3507,7 +3505,7 @@ std::unique_ptr<expr_t> action_t::create_expression( const std::string& name_str
     std::vector<action_t*> in_flight_list;
     bool in_flight_singleton = ( splits[ 0 ] == "in_flight" ||
       splits[ 0 ] == "in_flight_to_target" || splits[ 0 ] == "in_flight_remains" );
-    std::string action_name  = ( in_flight_singleton ) ? name_str : splits[ 1 ];
+    auto action_name  = ( in_flight_singleton ) ? name_str : splits[ 1 ];
     for ( size_t i = 0; i < player->action_list.size(); ++i )
     {
       action_t* action = player->action_list[ i ];
@@ -3605,14 +3603,14 @@ std::unique_ptr<expr_t> action_t::create_expression( const std::string& name_str
   // necessary for self.target.*, self.dot.*
   if ( splits.size() >= 2 && splits[ 0 ] == "self" )
   {
-    std::string tail = name_str.substr( splits[ 0 ].length() + 1 );
+    auto tail = name_str.substr( splits[ 0 ].length() + 1 );
     return player->create_action_expression( *this, tail );
   }
 
   // necessary for sim.target.*
   if ( splits.size() >= 2 && splits[ 0 ] == "sim" )
   {
-    std::string tail = name_str.substr( splits[ 0 ].length() + 1 );
+    auto tail = name_str.substr( splits[ 0 ].length() + 1 );
     return sim->create_expression( tail );
   }
 
@@ -4661,8 +4659,31 @@ void action_t::apply_affecting_effect( const spelleffect_data_t& effect )
     return;
   }
 
-  sim->print_debug( "{} {} is affected by effect {} (spell {} - {} - effect #{})", *player, *this, effect.id(),
-                    effect.spell()->name_cstr(), effect.spell()->id(), effect.spell_effect_num() + 1 );
+  if ( sim->debug )
+  {
+    const spell_data_t& spell = *effect.spell();
+    std::string desc_str;
+    const auto& spell_text = player->dbc->spell_text( spell.id() );
+    if ( spell_text.rank() )
+      desc_str = fmt::format( " (desc={})", spell_text.rank() );
+    sim->print_debug( "{} {} is affected by effect {} ({}{} (id={}) - effect #{})", *player, *this, effect.id(),
+                      spell.name_cstr(), desc_str, spell.id(), effect.spell_effect_num() + 1 );
+  }
+
+  auto apply_effect_n_multiplier = [ this ]( const spelleffect_data_t& effect, unsigned n ) {
+    if ( is_direct_damage_effect( data().effectN( n ) ) )
+    {
+      base_dd_multiplier *= 1 + effect.percent();
+      sim->print_debug( "{} base_dd_multiplier modified by {}% to {}",
+                        *this, effect.base_value(), base_dd_multiplier );
+    }
+    else if ( is_periodic_damage_effect( data().effectN( n ) ) )
+    {
+      base_td_multiplier *= 1 + effect.percent();
+      sim->print_debug( "{} base_td_multiplier modified by {}% to {}",
+                        *this, effect.base_value(), base_td_multiplier );
+    }
+  };
 
   if ( data().affected_by( effect ) )
   {
@@ -4700,18 +4721,18 @@ void action_t::apply_affecting_effect( const spelleffect_data_t& effect )
           case P_RESOURCE_COST:
             base_costs[ resource_current ] += effect.base_value();
             sim->print_debug( "{} base resource cost for resource {} modified by {}", *this,
-                              util::resource_type_string( resource_current ), effect.base_value() );
+                              resource_current, effect.base_value() );
             break;
 
           case P_TARGET:
             aoe += effect.base_value();
             sim->print_debug( "{} max target count modified by {}", *this, effect.base_value() );
-
             break;
 
           case P_GCD:
             trigger_gcd += effect.time_value();
             sim->print_debug( "{} trigger_gcd modified by {} to {}", *this, effect.time_value(), trigger_gcd );
+            break;
 
           default:
             break;
@@ -4727,14 +4748,14 @@ void action_t::apply_affecting_effect( const spelleffect_data_t& effect )
             break;
 
           case P_COOLDOWN:
-            cooldown->duration *= 1 + effect.percent();
-            sim->print_debug( "{} cooldown duration modified by {}%", *this, effect.base_value() );
+            base_recharge_multiplier *= 1 + effect.percent();
+            sim->print_debug( "{} cooldown recharge multiplier modified by {}%", *this, effect.base_value() );
             break;
 
           case P_RESOURCE_COST:
             base_costs[ resource_current ] *= 1 + effect.percent();
             sim->print_debug( "{} base resource cost for resource {} modified by {}", *this,
-                              util::resource_type_string( resource_current ), effect.base_value() );
+                              resource_current, effect.base_value() );
             break;
 
           case P_TICK_DAMAGE:
@@ -4765,9 +4786,14 @@ void action_t::apply_affecting_effect( const spelleffect_data_t& effect )
         sim->print_debug( "{} cooldown set to hasted", *this );
         break;
 
-      case A_453:  // Modify Cooldown Duration
+      case A_453:  // Modify Recharge Time
         cooldown->duration += effect.time_value();
         sim->print_debug( "{} cooldown duration modified by {}", *this, effect.time_value() );
+        break;
+
+      case A_454:  // Modify Recharge Time%
+        base_recharge_multiplier *= 1 + effect.percent();
+        sim->print_debug( "{} cooldown recharge multiplier modified by {}%", *this, effect.base_value() );
         break;
 
       default:
@@ -4784,6 +4810,23 @@ void action_t::apply_affecting_effect( const spelleffect_data_t& effect )
           case P_GCD:
             trigger_gcd *= ( 100 + effect.base_value() ) / 100.0;
             sim->print_debug( "{} trigger_gcd modified by {}% to {}", *this, effect.base_value(), trigger_gcd );
+            break;
+
+          case P_EFFECT_1:
+            apply_effect_n_multiplier( effect, 1 );
+            break;
+
+          case P_GENERIC:
+            base_dd_multiplier *= ( 100 + effect.base_value() ) / 100.0;
+            sim->print_debug( "{} base_dd_multiplier modified by {}% to {}", *this, effect.base_value(),
+                              base_dd_multiplier );
+            break;
+
+          case P_TICK_DAMAGE:
+            base_td_multiplier *= ( 100 + effect.base_value() ) / 100.0;
+            sim->print_debug( "{}base_td_multiplier modified by {}% to {}", *this, effect.base_value(),
+                              base_td_multiplier );
+            break;
 
           default:
             break;

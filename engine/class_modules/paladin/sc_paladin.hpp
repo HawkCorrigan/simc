@@ -409,7 +409,7 @@ public:
   virtual void      init_spells() override;
   virtual void      init_action_list() override;
   virtual void      reset() override;
-  virtual std::unique_ptr<expr_t> create_expression( const std::string& name ) override;
+  virtual std::unique_ptr<expr_t> create_expression( util::string_view name ) override;
 
   // player stat functions
   virtual double    composite_attribute_multiplier( attribute_e attr ) const override;
@@ -438,7 +438,7 @@ public:
   virtual void      create_options() override;
   virtual double    matching_gear_multiplier( attribute_e attr ) const override;
   virtual void      create_actions() override;
-  virtual action_t* create_action( const std::string& name, const std::string& options_str ) override;
+  virtual action_t* create_action( util::string_view name, const std::string& options_str ) override;
   virtual resource_e primary_resource() const override;
   virtual role_e    primary_role() const override;
   virtual stat_e    convert_hybrid_stat( stat_e s ) const override;
@@ -457,7 +457,7 @@ public:
   void         trigger_memory_of_lucid_dreams( double cost );
   virtual void vision_of_perfection_proc() override;
 
-  std::unique_ptr<expr_t> create_consecration_expression( const std::string& expr_str );
+  std::unique_ptr<expr_t> create_consecration_expression( util::string_view expr_str );
 
   ground_aoe_event_t* active_consecration;
 
@@ -465,23 +465,24 @@ public:
   std::string default_flask() const override;
   std::string default_food() const override;
   std::string default_rune() const override;
+  void apply_affecting_auras( action_t& action ) override;
 
   void      create_buffs_retribution();
   void      init_rng_retribution();
   void      init_spells_retribution();
   void      generate_action_prio_list_ret();
   void      create_ret_actions();
-  action_t* create_action_retribution( const std::string& name, const std::string& options_str );
+  action_t* create_action_retribution( util::string_view name, const std::string& options_str );
 
   void      create_buffs_protection();
   void      init_spells_protection();
   void      create_prot_actions();
-  action_t* create_action_protection( const std::string& name, const std::string& options_str );
+  action_t* create_action_protection( util::string_view name, const std::string& options_str );
 
   void      create_buffs_holy();
   void      init_spells_holy();
   void      create_holy_actions();
-  action_t* create_action_holy( const std::string& name, const std::string& options_str );
+  action_t* create_action_holy( util::string_view name, const std::string& options_str );
 
   void    generate_action_prio_list_prot();
   void    generate_action_prio_list_holy();
@@ -612,49 +613,12 @@ public:
     hasted_cd( false ), hasted_gcd( false )
   {
     // Spec aura damage increase
-    if ( p -> specialization() == PALADIN_PROTECTION )
-    {
-      if ( this -> data().affected_by( p -> spec.protection_paladin -> effectN( 1 ) ) )
-      { // Direct damage, global
-        this -> base_dd_multiplier *= 1.0 + p -> spec.protection_paladin -> effectN( 1 ).percent();
-      }
-      if ( this -> data().affected_by( p -> spec.protection_paladin -> effectN( 2 ) ) )
-      { // Periodic damage, global
-        this -> base_td_multiplier *= 1.0 + p -> spec.protection_paladin -> effectN( 2 ).percent();
-      }
-    }
-
-    else if ( p -> specialization() == PALADIN_HOLY )
+    if ( p -> specialization() == PALADIN_HOLY )
     {
       this -> affected_by.judgment = this -> data().affected_by( p -> spells.judgment_debuff -> effectN( 1 ) );
     }
-
     else // Default to Ret
     {
-      if ( this -> data().affected_by( p -> spec.retribution_paladin -> effectN( 1 ) ) )
-      { // Direct damage, global
-        this -> base_dd_multiplier *= 1.0 + p -> spec.retribution_paladin -> effectN( 1 ).percent();
-      }
-      if ( this -> data().affected_by( p -> spec.retribution_paladin -> effectN( 2 ) ) )
-      { // Periodic damage, global
-        this -> base_td_multiplier *= 1.0 + p -> spec.retribution_paladin -> effectN( 2 ).percent();
-      }
-
-      if ( this -> data().affected_by( p -> spec.retribution_paladin -> effectN( 11 ) ) )
-      { // 2019-04-01, 0% increase to judgment, keeping it here just in case
-        this -> base_dd_multiplier *= 1.0 + p -> spec.retribution_paladin -> effectN( 11 ).percent();
-      }
-
-      if ( this -> data().affected_by( p -> spec.retribution_paladin -> effectN( 12 ) ) )
-      { // In the same manner, 0% increase to crusader's strike
-        this -> base_dd_multiplier *= 1.0 + p -> spec.retribution_paladin -> effectN( 12 ).percent();
-      }
-
-      if ( this -> data().affected_by( p -> spec.retribution_paladin -> effectN( 13 ) ) )
-      { // Consecration
-        this -> base_dd_multiplier *= 1.0 + p -> spec.retribution_paladin -> effectN( 13 ).percent();
-      }
-
       // Mastery
       this -> affected_by.hand_of_light = this -> data().affected_by( p -> mastery.hand_of_light -> effectN( 1 ) );
 

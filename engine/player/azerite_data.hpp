@@ -216,7 +216,7 @@ public:
   size_t rank( util::string_view name, bool tokenized = false ) const;
 
   /// Parse and sanitize azerite_override option
-  bool parse_override( sim_t*, const std::string& /*name*/, const std::string& /*value*/ );
+  bool parse_override( sim_t*, util::string_view /*name*/, const std::string& /*value*/ );
   /// Output overrides as an azerite_override options string
   std::string overrides_str() const;
   /// Clone overrides from another actor
@@ -284,7 +284,7 @@ public:
   /// Clone state from another actor
   void copy_state( const std::unique_ptr<azerite_essence_state_t>& other );
 
-  bool parse_azerite_essence( sim_t*, const std::string& /* name */, const std::string& /* value */ );
+  bool parse_azerite_essence( sim_t*, util::string_view /* name */, const std::string& /* value */ );
 
   /// Create essence-related expressions
   std::unique_ptr<expr_t> create_expression( const std::vector<std::string>& expr_str ) const;
@@ -312,7 +312,7 @@ void register_azerite_powers();
 /// Register generic azerite and azerite essence powers target data initializers
 void register_azerite_target_data_initializers( sim_t* );
 /// Create major Azerite Essence actions
-action_t* create_action( player_t* p, const std::string& name, const std::string& options );
+action_t* create_action( player_t* p, util::string_view name, const std::string& options );
 
 /// Compute the <min, avg, max> value of the spell effect given, based on the azerite power
 std::tuple<int, int, int> compute_value( const azerite_power_t& power,

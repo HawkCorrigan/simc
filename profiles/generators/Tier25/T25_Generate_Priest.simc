@@ -1,5 +1,5 @@
 priest="T25_Priest_Shadow"
-level=120
+level=50
 race=human
 spec=shadow
 role=spell
@@ -34,3 +34,9 @@ main_hand=vorzz_yoqal,id=172196,bonus_id=4824/1517,enchant=quick_navigation
 off_hand=uhnish_vwah,id=172190,bonus_id=4824/1517
 
 save=T25_Priest_Shadow.simc
+
+copy="T25_Priest_Discipline"
+spec=discipline
+talents=3020110
+
+save=T25_Priest_Discipline.simc

@@ -790,7 +790,7 @@ public:
   std::string default_rune() const override;
 
   // player_t overrides
-  action_t* create_action( const std::string& name, const std::string& options ) override;
+  action_t* create_action( util::string_view name, const std::string& options ) override;
   double composite_base_armor_multiplier() const override;
   double composite_melee_crit_chance() const override;
   double composite_melee_crit_chance_multiplier() const override;
@@ -815,7 +815,7 @@ public:
   double resource_gain( resource_e, double, gain_t* = nullptr, action_t* = nullptr ) override;
   double temporary_movement_modifier() const override;
   double passive_movement_modifier() const override;
-  pet_t* create_pet( const std::string& name, const std::string& type = std::string() ) override;
+  pet_t* create_pet( util::string_view name, util::string_view type = "" ) override;
   void create_pets() override;
   void init_spells() override;
   void init_base_stats() override;
@@ -846,7 +846,7 @@ public:
   void init_action_list() override;
   void activate() override;
   void collect_resource_timeline_information() override;
-  std::unique_ptr<expr_t> create_expression( const std::string& name_str ) override;
+  std::unique_ptr<expr_t> create_expression( util::string_view name_str ) override;
   monk_td_t* get_target_data( player_t* target ) const override
   {
     monk_td_t*& td = target_data[ target ];
@@ -1805,7 +1805,7 @@ public:
     pet_t::init_action_list();
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "auto_attack" )
       return new auto_attack_t( this, options_str );
@@ -1898,7 +1898,7 @@ struct xuen_pet_t : public pet_t
 private:
   struct melee_t : public melee_attack_t
   {
-    melee_t( const std::string& n, xuen_pet_t* player ) : melee_attack_t( n, player, spell_data_t::nil() )
+    melee_t( util::string_view n, xuen_pet_t* player ) : melee_attack_t( n, player, spell_data_t::nil() )
     {
       background = repeating = may_crit = may_glance = true;
       school                                         = SCHOOL_PHYSICAL;
@@ -1989,7 +1989,7 @@ private:
   };
 
 public:
-  xuen_pet_t( sim_t* sim, monk_t* owner, std::string name ) : pet_t( sim, owner, name, true )
+  xuen_pet_t( sim_t* sim, monk_t* owner, util::string_view name ) : pet_t( sim, owner, name, true )
   {
     main_hand_weapon.type       = WEAPON_BEAST;
     main_hand_weapon.min_dmg    = dbc->spell_scaling( o()->type, level() );
@@ -2017,7 +2017,7 @@ public:
     pet_t::init_action_list();
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "crackling_tiger_lightning" )
       return new crackling_tiger_lightning_t( this, options_str );
@@ -2129,7 +2129,7 @@ private:
   };
 
 public:
-  fury_of_xuen_pet_t( sim_t* sim, monk_t* owner, std::string name ) : pet_t( sim, owner, name, true )
+  fury_of_xuen_pet_t( sim_t* sim, monk_t* owner, util::string_view name ) : pet_t( sim, owner, name, true )
   {
     main_hand_weapon.type       = WEAPON_BEAST;
     main_hand_weapon.min_dmg    = dbc->spell_scaling( o()->type, level() );
@@ -2157,7 +2157,7 @@ public:
     pet_t::init_action_list();
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "crackling_tiger_lightning" )
       return new crackling_tiger_lightning_t( this, options_str );
@@ -2298,7 +2298,7 @@ public:
     pet_t::init_action_list();
   }
 
-  action_t* create_action( const std::string& name, const std::string& options_str ) override
+  action_t* create_action( util::string_view name, const std::string& options_str ) override
   {
     if ( name == "stomp" )
       return new stomp_t( this, options_str );
@@ -2338,7 +2338,7 @@ private:
 public:
   using base_t = monk_action_t<Base>;
 
-  monk_action_t( const std::string& n, monk_t* player, const spell_data_t* s = spell_data_t::nil() )
+  monk_action_t( util::string_view n, monk_t* player, const spell_data_t* s = spell_data_t::nil() )
     : ab( n, player, s ), sef_ability( SEF_NONE ), ww_mastery( false ), may_combo_strike( false ), affected_by()
   {
     ab::may_crit = true;
@@ -2358,7 +2358,7 @@ public:
     return p()->get_target_data( t );
   }
 
-  std::unique_ptr<expr_t> create_expression( const std::string& name_str ) override
+  std::unique_ptr<expr_t> create_expression( util::string_view name_str ) override
   {
     if ( name_str == "combo_strike" )
       return make_mem_fn_expr( name_str, *this, &monk_action_t::is_combo_strike );
@@ -2765,7 +2765,7 @@ public:
 
 struct monk_spell_t : public monk_action_t<spell_t>
 {
-  monk_spell_t( const std::string& n, monk_t* player, const spell_data_t* s = spell_data_t::nil() )
+  monk_spell_t( util::string_view n, monk_t* player, const spell_data_t* s = spell_data_t::nil() )
     : base_t( n, player, s )
   {
     ap_type = attack_power_type::WEAPON_MAINHAND;
@@ -3157,7 +3157,7 @@ struct monk_melee_attack_t : public monk_action_t<melee_attack_t>
   weapon_t* mh;
   weapon_t* oh;
 
-  monk_melee_attack_t( const std::string& n, monk_t* player, const spell_data_t* s = spell_data_t::nil() )
+  monk_melee_attack_t( util::string_view n, monk_t* player, const spell_data_t* s = spell_data_t::nil() )
     : base_t( n, player, s ), mh( nullptr ), oh( nullptr )
   {
     special    = true;
@@ -6375,12 +6375,8 @@ struct expel_harm_t : public monk_spell_t
     // healing done and can't crit, but this gets damage dealt
     // independently and allows it to crit, so it will have higher
     // variance but with enough iterations will have the same mean.
-
-    // TODO: update for shadowlands
-    // double coeff =
-    //     p()->passives.gift_of_the_ox_heal->effectN( 1 ).ap_coeff() * p()->spec.expel_harm->effectN( 2 ).percent();
     double coeff =
-        p()->passives.gift_of_the_ox_heal->effectN( 1 ).ap_coeff();
+    p()->passives.gift_of_the_ox_heal->effectN( 1 ).ap_coeff() * p()->spec.expel_harm->effectN( 2 ).percent();
         
     double ap = p()->composite_melee_attack_power( attack_power_type::WEAPON_MAINHAND ) *
                 p()->composite_attack_power_multiplier();
@@ -7502,7 +7498,7 @@ monk_td_t::monk_td_t( player_t* target, monk_t* p )
 
 // monk_t::create_action ====================================================
 
-action_t* monk_t::create_action( const std::string& name, const std::string& options_str )
+action_t* monk_t::create_action( util::string_view name, const std::string& options_str )
 {
   using namespace actions;
   // General
@@ -7745,7 +7741,7 @@ int monk_t::mark_of_the_crane_counter()
 
 // monk_t::create_pet =======================================================
 
-pet_t* monk_t::create_pet( const std::string& name, const std::string& /* pet_type */ )
+pet_t* monk_t::create_pet( util::string_view name, util::string_view /* pet_type */ )
 {
   pet_t* p = find_pet( name );
 
@@ -10399,7 +10395,7 @@ double monk_t::calculate_last_stagger_tick_damage( int n ) const
 
 // monk_t::create_expression ==================================================
 
-std::unique_ptr<expr_t> monk_t::create_expression( const std::string& name_str )
+std::unique_ptr<expr_t> monk_t::create_expression( util::string_view name_str )
 {
   std::vector<std::string> splits = util::string_split( name_str, "." );
   if ( splits.size() == 2 && splits[ 0 ] == "stagger" )

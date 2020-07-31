@@ -924,7 +924,7 @@ void paladin_t::create_actions()
 
 // paladin_t::create_action =================================================
 
-action_t* paladin_t::create_action( const std::string& name, const std::string& options_str )
+action_t* paladin_t::create_action( util::string_view name, const std::string& options_str )
 {
   action_t* ret_action = create_action_retribution( name, options_str );
   if ( ret_action )
@@ -1923,7 +1923,7 @@ bool paladin_t::get_how_availability( player_t* t ) const
 
 // player_t::create_expression ==============================================
 
-std::unique_ptr<expr_t> paladin_t::create_consecration_expression( const std::string& expr_str )
+std::unique_ptr<expr_t> paladin_t::create_consecration_expression( util::string_view expr_str )
 {
   auto expr = util::string_split( expr_str, "." );
   if ( expr.size() != 2 )
@@ -1951,12 +1951,12 @@ std::unique_ptr<expr_t> paladin_t::create_consecration_expression( const std::st
   return nullptr;
 }
 
-std::unique_ptr<expr_t> paladin_t::create_expression( const std::string& name_str )
+std::unique_ptr<expr_t> paladin_t::create_expression( util::string_view name_str )
 {
   struct paladin_expr_t : public expr_t
   {
     paladin_t& paladin;
-    paladin_expr_t( const std::string& n, paladin_t& p ) :
+    paladin_expr_t( util::string_view n, paladin_t& p ) :
       expr_t( n ), paladin( p ) {}
   };
 
@@ -1971,7 +1971,7 @@ std::unique_ptr<expr_t> paladin_t::create_expression( const std::string& name_st
     cooldown_t* how_cd;
     cooldown_t* wake_cd;
 
-    time_to_hpg_expr_t( const std::string& n, paladin_t& p ) :
+    time_to_hpg_expr_t( util::string_view n, paladin_t& p ) :
       paladin_expr_t( n, p ), cs_cd( p.get_cooldown( "crusader_strike" ) ),
       boj_cd ( p.get_cooldown( "blade_of_justice" )),
       j_cd( p.get_cooldown( "judgment" ) ),
@@ -2054,6 +2054,15 @@ void paladin_t::datacollection_end()
   {
     cdw -> datacollection_end();
   }
+}
+
+void paladin_t::apply_affecting_auras( action_t& action )
+{
+  player_t::apply_affecting_auras(action);
+
+  action.apply_affecting_aura( spec.retribution_paladin );
+  action.apply_affecting_aura( spec.holy_paladin );
+  action.apply_affecting_aura( spec.protection_paladin );
 }
 
 /* Report Extension Class

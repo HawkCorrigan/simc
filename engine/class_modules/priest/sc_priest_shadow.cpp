@@ -89,13 +89,8 @@ public:
 
     spell_power_mod.direct *= 1.0 + player.talents.fortress_of_the_mind->effectN( 4 ).percent();
 
-    auto rank2_shadow = player.find_specialization_spell( 319899, PRIEST_SHADOW );
-    if ( rank2_shadow->ok() )
-    {
-      cooldown->duration = data().cooldown() + rank2_shadow->effectN( 1 ).time_value();
-    }
-
-    // Rank 2 Discipline not implemented
+    // Reduces CD of Mind Blast but not SW:V
+    apply_affecting_aura(player.find_rank_spell( "Mind Blast", "Rank 2", PRIEST_SHADOW ) );
   }
 
   void init() override
@@ -115,15 +110,6 @@ public:
   void execute() override
   {
     priest_spell_t::execute();
-
-    if ( priest().talents.shadow_word_void->ok() )
-    {
-      expansion::bfa::trigger_leyshocks_grand_compilation( STAT_VERSATILITY_RATING, player );
-    }
-    else
-    {
-      expansion::bfa::trigger_leyshocks_grand_compilation( STAT_CRIT_RATING, player );
-    }
   }
 
   double bonus_da( const action_state_t* state ) const override
@@ -255,8 +241,6 @@ struct mind_sear_tick_t final : public priest_spell_t
     if ( result_is_hit( s->result ) )
     {
       priest().generate_insanity( insanity_gain, priest().gains.insanity_mind_sear, s->action );
-      expansion::bfa::trigger_leyshocks_grand_compilation( STAT_CRIT_RATING, player );
-      expansion::bfa::trigger_leyshocks_grand_compilation( STAT_HASTE_RATING, player );
     }
   }
 };
@@ -325,15 +309,22 @@ struct mind_flay_t final : public priest_spell_t
 struct shadow_word_death_t final : public priest_spell_t
 {
   shadow_word_death_t( priest_t& p, util::string_view options_str )
-    : priest_spell_t( "shadow_word_death", p, p.find_class_spell( "Shadow Word: Death" ) )
+  : priest_spell_t( "shadow_word_death", p, p.find_class_spell( "Shadow Word: Death" ) )
   {
     parse_options( options_str );
 
-    auto rank2 = p.find_spell( 322107 );
+    auto rank2 = p.find_rank_spell( "Shadow Word: Death", "Rank 2" );
     if ( rank2->ok() )
     {
       cooldown->duration += rank2->effectN( 1 ).time_value();
     }
+  }
+
+  void init() override
+  {
+    priest().cooldowns.shadow_word_death->hasted = true;
+
+    priest_spell_t::init();
   }
 
   void impact( action_state_t* s ) override
@@ -347,12 +338,24 @@ struct shadow_word_death_t final : public priest_spell_t
     {
       total_insanity_gain = data().effectN( 3 ).base_value();
 
+      if ( priest().legendary.painbreaker_psalm->ok() )
+      {
+        // TODO: Check if this ever gets un-hardcoded for (336165)
+        total_insanity_gain += 10;
+      }
+
       // TODO: Add in a custom buff that checks after 1 second to see if the target SWD was cast on is now dead.
 
       if ( !( ( save_health_percentage > 0.0 ) && ( s->target->health_percentage() <= 0.0 ) ) )
       {
         // target is not killed
         inflict_self_damage( s->result_amount );
+      }
+
+      if ( priest().talents.death_and_madness->ok() )
+      {
+  		  // NYI
+  		  // trigger death_and_madness_debuff on current target
       }
 
       priest().generate_insanity( total_insanity_gain, priest().gains.insanity_shadow_word_death, s->action );
@@ -408,10 +411,7 @@ struct shadow_crash_t final : public priest_spell_t
   void execute() override
   {
     priest_spell_t::execute();
-
     priest().generate_insanity( insanity_gain, priest().gains.insanity_shadow_crash, execute_state->action );
-    expansion::bfa::trigger_leyshocks_grand_compilation( STAT_MASTERY_RATING, player );
-    expansion::bfa::trigger_leyshocks_grand_compilation( STAT_VERSATILITY_RATING, player );
   }
 
   timespan_t travel_time() const override
@@ -433,10 +433,8 @@ struct shadowform_t final : public priest_spell_t
   void execute() override
   {
     priest_spell_t::execute();
-
     priest().buffs.shadowform_state->trigger();
     priest().buffs.shadowform->trigger();
-    expansion::bfa::trigger_leyshocks_grand_compilation( STAT_VERSATILITY_RATING, player );
   }
 };
 
@@ -654,9 +652,6 @@ struct shadowy_apparition_spell_t final : public priest_spell_t
     priest().procs.shadowy_apparition->occur();
     set_target( target );
     execute();
-
-    // TODO: Determine if this is dependent on talenting into Auspicious Spirits
-    expansion::bfa::trigger_leyshocks_grand_compilation( STAT_HASTE_RATING, player );
   }
 };
 
@@ -689,7 +684,7 @@ struct shadow_word_pain_t final : public priest_spell_t
       add_child( priest().active_spells.shadowy_apparitions );
     }
 
-    auto rank2 = p.find_spell( 327820 );
+    auto rank2 = p.find_rank_spell( "Shadow Word: Pain", "Rank 2" );
     if ( rank2->ok() )
     {
       dot_duration += rank2->effectN( 1 ).time_value();
@@ -748,8 +743,6 @@ struct shadow_word_pain_t final : public priest_spell_t
     {
       priest().generate_insanity( insanity_gain, priest().gains.insanity_shadow_word_pain_onhit, s->action );
     }
-
-    expansion::bfa::trigger_leyshocks_grand_compilation( STAT_HASTE_RATING, player );
   }
 
   void tick( dot_t* d ) override
@@ -766,10 +759,6 @@ struct shadow_word_pain_t final : public priest_spell_t
 
     if ( d->state->result_amount > 0 )
     {
-      if ( trigger_shadowy_insight() )
-      {
-        expansion::bfa::trigger_leyshocks_grand_compilation( STAT_MASTERY_RATING, player );
-      }
       trigger_power_of_the_dark_side();
     }
   }
@@ -849,7 +838,6 @@ struct vampiric_touch_t final : public priest_spell_t
       child_swp->target = s->target;
       child_swp->execute();
     }
-    expansion::bfa::trigger_leyshocks_grand_compilation( STAT_MASTERY_RATING, player );
   }
 
   void tick( dot_t* d ) override
@@ -868,14 +856,51 @@ struct vampiric_touch_t final : public priest_spell_t
   }
 };
 
+struct devouring_plague_t final : public priest_spell_t
+{
+  double insanity_cost;
+
+  devouring_plague_t( priest_t& p, util::string_view options_str )
+    : priest_spell_t( "devouring_plague", p, p.find_class_spell( "Devouring Plague" ) ),
+      insanity_cost( data().cost( POWER_INSANITY ) / 100.0 )
+  {
+    parse_options( options_str );
+    may_crit                        = true;
+    tick_zero                       = false;
+    base_costs[ RESOURCE_INSANITY ] = 0; // custom insanity handling
+    tick_may_crit                   = false;
+  }
+
+  void consume_resource() override
+  {
+    priest_spell_t::consume_resource();
+
+    priest().resource_loss( RESOURCE_INSANITY, insanity_cost, priest().gains.insanity_lost_devouring_plague, execute_state->action );
+
+    priest().insanity.adjust_end_event();
+  }
+
+  bool ready() override
+  {
+    if ( priest().resources.current[ RESOURCE_INSANITY ] >= insanity_cost )
+    {
+      return priest_spell_t::ready();
+    }
+    else
+    {
+      return false;
+    }
+  }
+};
+
 struct void_bolt_t final : public priest_spell_t
 {
   struct void_bolt_extension_t : public priest_spell_t
   {
     timespan_t dot_extension;
 
-    void_bolt_extension_t( priest_t& player )
-      : priest_spell_t( "void_bolt_extension", player, player.find_specialization_spell( 231688 ) )
+    void_bolt_extension_t( priest_t& player, const spell_data_t* rank2_spell )
+      : priest_spell_t( "void_bolt_extension", player, rank2_spell )
     {
       dot_extension = data().effectN( 1 ).time_value();
       aoe           = -1;
@@ -904,8 +929,6 @@ struct void_bolt_t final : public priest_spell_t
       {
         td.dots.vampiric_touch->extend_duration( dot_extension, true );
       }
-      // note: this is super buggy in-game and doesn't always give the buff
-      expansion::bfa::trigger_leyshocks_grand_compilation( STAT_CRIT_RATING, player );
     }
   };
 
@@ -922,10 +945,10 @@ struct void_bolt_t final : public priest_spell_t
     energize_type    = ENERGIZE_NONE;  // disable resource generation from spell data.
     cooldown->hasted = true;
 
-    auto rank2 = player.find_specialization_spell( 231688 );
+    auto rank2 = player.find_rank_spell( "Void Bolt", "Rank 2" );
     if ( rank2->ok() )
     {
-      void_bolt_extension = new void_bolt_extension_t( player );
+      void_bolt_extension = new void_bolt_extension_t( player, rank2 );
     }
   }
 
@@ -1284,10 +1307,6 @@ struct insanity_drain_stacks_t final : public priest_buff_t<buff_t>
       {
         ids->stack_increase = make_event<stack_increase_event_t>( sim(), ids );
       }
-      // For some reason, as a shadow priest as long as you are not sitting you gain stacks of the VERS buffs
-      // I think it is ties to resource gen, but you effectively get 100% uptime
-      expansion::bfa::trigger_leyshocks_grand_compilation( STAT_VERSATILITY_RATING, priest );
-
       // Memory of Lucid Dreams minor effect tries to give instanity back every 1 second, lining up with
       // the time Drain increases.
       priest->trigger_lucid_dreams( 0.0 );
@@ -1417,6 +1436,44 @@ struct lingering_insanity_t final : public priest_buff_t<buff_t>
     {
       expire();
     }
+  }
+};
+
+struct death_and_madness_debuff_t final : public priest_buff_t<buff_t>
+{
+  death_and_madness_debuff_t( priest_t& p ) : base_t( p, "death_and_madness", p.talents.death_and_madness )
+  {
+  }
+
+  void expire_override( int expiration_stacks, timespan_t remaining_duration ) override
+  {
+    if ( remaining_duration > timespan_t::zero() )
+    {
+      if ( sim -> debug )
+      {
+        sim -> out_debug.printf("%s death_and_madness insanity triggered", player -> name() );
+      }
+
+      priest().buffs.death_and_madness_buff->trigger();
+      priest().cooldowns.shadow_word_death->reset( true );
+    }
+
+    buff_t::expire_override( expiration_stacks, remaining_duration );
+  }
+};
+
+struct death_and_madness_buff_t final : public priest_buff_t<buff_t>
+{
+  double insanity_gain;
+
+  death_and_madness_buff_t( priest_t& p )
+  : base_t( p, "death_and_madness", p.find_spell( 321973 ) ),
+    insanity_gain( p.find_spell( 321973 )->effectN( 1 ).base_value() / 55 )
+  {
+    set_tick_callback( [ this ] ( buff_t*, int, timespan_t )
+    {
+      priest().generate_insanity( insanity_gain, priest().gains.insanity_death_and_madness, nullptr );
+    } );
   }
 };
 
@@ -1804,7 +1861,6 @@ void priest_t::insanity_state_t::adjust_end_event()
 void priest_t::create_buffs_shadow()
 {
   // Baseline
-
   buffs.shadowform            = make_buff<buffs::shadowform_t>( *this );
   buffs.shadowform_state      = make_buff<buffs::shadowform_state_t>( *this );
   buffs.shadowy_insight       = make_buff<buffs::shadowy_insight_t>( *this );
@@ -1813,14 +1869,15 @@ void priest_t::create_buffs_shadow()
   buffs.vampiric_embrace      = make_buff<buffs::vampiric_embrace_t>( *this );
 
   // Talents
-  buffs.void_torrent           = make_buff<buffs::void_torrent_t>( *this );
-  buffs.surrender_to_madness   = make_buff<buffs::surrender_to_madness_t>( *this );
-  buffs.surrendered_to_madness = make_buff<buffs::surrendered_to_madness_t>( *this );
-  buffs.lingering_insanity     = make_buff<buffs::lingering_insanity_t>( *this );
+  buffs.void_torrent             = make_buff<buffs::void_torrent_t>( *this );
+  buffs.surrender_to_madness     = make_buff<buffs::surrender_to_madness_t>( *this );
+  buffs.surrendered_to_madness   = make_buff<buffs::surrendered_to_madness_t>( *this );
+  buffs.lingering_insanity       = make_buff<buffs::lingering_insanity_t>( *this );
+  buffs.death_and_madness_debuff = make_buff<buffs::death_and_madness_debuff_t>( *this );
+  buffs.death_and_madness_buff   = make_buff<buffs::death_and_madness_buff_t>( *this );
 
   // Azerite Powers
-  buffs.chorus_of_insanity = make_buff<buffs::chorus_of_insanity_t>( *this );
-
+  buffs.chorus_of_insanity     = make_buff<buffs::chorus_of_insanity_t>( *this );
   buffs.harvested_thoughts     = make_buff<buffs::harvested_thoughts_t>( *this );
   buffs.whispers_of_the_damned = make_buff<buffs::whispers_of_the_damned_t>( *this );
 }
@@ -1962,6 +2019,10 @@ action_t* priest_t::create_action_shadow( util::string_view name, util::string_v
   {
     return new dark_ascension_t( *this, options_str );
   }
+  if ( name == "devouring_plague" )
+  {
+    return new devouring_plague_t( *this, options_str );
+  }
 
   return nullptr;
 }
@@ -2073,6 +2134,7 @@ void priest_t::generate_apl_shadow()
       "buff.chorus_of_insanity.stack>20)|azerite.chorus_of_insanity.rank=0",
       "Use these cooldowns in between your 1st and 2nd Void Bolt in your 2nd Voidform when you have Chorus of Insanity "
       "active" );
+  cds->add_action( this, "Power Infusion", "if=buff.voidform.up" );
   cds->add_action( "use_items", "Default fallback for usable items: Use on cooldown." );
 
   // Crit CDs
@@ -2085,26 +2147,21 @@ void priest_t::generate_apl_shadow()
   single->add_talent( this, "Dark Ascension", "if=buff.voidform.down" );
   single->add_action( this, "Void Bolt" );
   single->add_action( "call_action_list,name=cds" );
+  single->add_action( this, "Devouring Plague", "if=refreshable&buff.voidform.up");
   single->add_action(
       this, "Mind Sear",
       "if=buff.harvested_thoughts.up&cooldown.void_bolt.remains>=1.5&"
       "azerite.searing_dialogue.rank>=1",
       "Use Mind Sear on ST only if you get a Thought Harvester Proc with at least 1 Searing Dialogue Trait." );
-  single->add_talent( this, "Shadow Word: Death",
-                      "if=target.time_to_die<3|"
-                      "cooldown.shadow_word_death.charges=2|"
-                      "(cooldown.shadow_word_death.charges=1&"
-                      "cooldown.shadow_word_death.remains<gcd.max)",
-                      "Use SWD before capping charges, or the target is about to die." );
+  single->add_action( this, "Shadow Word: Death",
+                      "if=target.time_to_die<3",
+                      "Use SWD if the target is about to die." );
   single->add_talent( this, "Surrender to Madness", "if=buff.voidform.stack>10+(10*buff.bloodlust.up)" );
   single->add_talent( this, "Dark Void", "if=raid_event.adds.in>10",
                       "Use Dark Void on CD unless adds are incoming in 10s or less." );
-  single->add_talent( this, "Mindbender", "if=talent.mindbender.enabled|(buff.voidform.stack>18|target.time_to_die<15)",
-                      "Use Mindbender at 19 or more stacks, or if the target will die in less than 15s." );
-  single->add_talent( this, "Shadow Word: Death",
-                      "if=!buff.voidform.up|"
-                      "(cooldown.shadow_word_death.charges=2&"
-                      "buff.voidform.stack<15)" );
+  single->add_talent( this, "Mindbender", "if=(talent.mindbender.enabled&buff.voidform.up)|(buff.voidform.stack>18|target.time_to_die<15)",
+                      "Use Shadowfiend at 19 or more stacks, or if the target will die in less than 15s. If using Minbender use on CD in Voidform" );
+  single->add_action( this, "Shadow Word: Death" );
   single->add_talent( this, "Shadow Crash", "if=raid_event.adds.in>5&raid_event.adds.duration<20",
                       "Use Shadow Crash on CD unless there are adds incoming." );
   single->add_action( this, "Mind Blast",
@@ -2136,7 +2193,7 @@ void priest_t::generate_apl_shadow()
   cleave->add_action( this, "Mind Sear", "if=buff.harvested_thoughts.up" );
   cleave->add_action( this, "Void Bolt" );
   cleave->add_action( "call_action_list,name=cds" );
-  cleave->add_talent( this, "Shadow Word: Death", "target_if=target.time_to_die<3|buff.voidform.down" );
+  cleave->add_action( this, "Shadow Word: Death", "target_if=target.time_to_die<3|buff.voidform.down" );
   cleave->add_talent( this, "Surrender to Madness", "if=buff.voidform.stack>10+(10*buff.bloodlust.up)" );
   cleave->add_talent( this, "Dark Void",
                       "if=raid_event.adds.in>10"
@@ -2161,6 +2218,7 @@ void priest_t::generate_apl_shadow()
                       ",if=(talent.misery.enabled&target.time_to_die>"
                       "((1.0+2.0*spell_targets.mind_sear)*variable.vt_mis_trait_ranks_check*"
                       "(variable.vt_mis_sd_check*spell_targets.mind_sear)))" );
+  cleave->add_action( this, "Devouring Plague", "if=refreshable&buff.voidform.up");
   cleave->add_talent( this, "Void Torrent", "if=buff.voidform.up" );
   cleave->add_action( this, "Mind Sear",
                       "target_if=spell_targets.mind_sear>1,"
