@@ -1,5 +1,6 @@
 #pragma once
 #include "simulationcraft.hpp"
+#include "player/covenant.hpp"
 #include "player/pet_spawner.hpp"
 
 namespace shaman
@@ -423,10 +424,10 @@ public:
   double composite_player_pet_damage_multiplier( const action_state_t* state ) const override;
   double composite_maelstrom_gain_coefficient( const action_state_t* state = nullptr ) const;
   double matching_gear_multiplier( attribute_e attr ) const override;
-  action_t* create_action( const std::string& name, const std::string& options ) override;
-  pet_t* create_pet( const std::string& name, const std::string& type = std::string() ) override;
+  action_t* create_action( util::string_view name, const std::string& options ) override;
+  pet_t* create_pet( util::string_view name, util::string_view type = "" ) override;
   void create_pets() override;
-  std::unique_ptr<expr_t> create_expression( const std::string& name ) override;
+  std::unique_ptr<expr_t> create_expression( util::string_view name ) override;
   resource_e primary_resource() const override
   {
     return RESOURCE_MANA;
@@ -508,7 +509,6 @@ shaman_td_t::shaman_td_t( player_t* target, shaman_t* p ) : actor_target_data_t(
   // Elemental
   
 }
-
 
 
 
