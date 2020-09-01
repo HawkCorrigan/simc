@@ -445,7 +445,6 @@ public:
   {
     // Generic / Shared
     const spell_data_t* elemental_blast;
-    const spell_data_t* totem_mastery;
     const spell_data_t* spirit_wolf;
     const spell_data_t* earth_shield;
     const spell_data_t* static_charge;
@@ -4810,21 +4809,6 @@ struct stormkeeper_t : public shaman_spell_t
   }
 };
 
-// Totemic Mastery Spell ====================================================
-struct totem_mastery_t : public shaman_spell_t
-{
-  totem_mastery_t( shaman_t* player, const std::string& options_str )
-    : shaman_spell_t( "totem_mastery", player, player->talent.totem_mastery, options_str )
-  {
-    harmful = may_crit = callbacks = may_miss = false;
-  }
-
-  void execute() override
-  {
-    shaman_spell_t::execute();
-  }
-};
-
 // Healing Surge Spell ======================================================
 
 struct healing_surge_t : public shaman_heal_t
@@ -5295,31 +5279,6 @@ struct capacitor_totem_t : public shaman_totem_pet_t
   }
 };
 
-// ==========================================================================
-// PvP talents/abilities
-// ==========================================================================
-
-struct lightning_lasso_t : public shaman_spell_t
-{
-  lightning_lasso_t( shaman_t* player, const std::string& options_str )
-    : shaman_spell_t( "lightning_lasso", player, player->find_spell( 305485 ), options_str )
-  {
-    affected_by_master_of_the_elements = false;
-    // if the major effect is not available the action is a background action, thus can't be used in the apl
-    background         = true;
-    cooldown->duration = p()->find_spell( 305483 )->cooldown();
-    channeled          = true;
-    tick_may_crit      = true;
-    may_crit           = false;
-    trigger_gcd        = p()->find_spell( 305483 )->gcd();
-  }
-
-  timespan_t tick_time( const action_state_t* /* s */ ) const override
-  {
-    return base_tick_time;
-  }
-};
-
 struct thundercharge_t : public shaman_spell_t
 {
   thundercharge_t( shaman_t* player, const std::string& options_str )
@@ -5559,10 +5518,6 @@ action_t* shaman_t::create_action( util::string_view name, const std::string& op
     return new stormkeeper_t( this, options_str );
   if ( name == "thunderstorm" )
     return new thunderstorm_t( this, options_str );
-  if ( name == "totem_mastery" )
-    return new totem_mastery_t( this, options_str );
-  if ( name == "lightning_lasso" )
-    return new lightning_lasso_t( this, options_str );
 
   // enhancement
   if ( name == "crash_lightning" )
@@ -5928,7 +5883,6 @@ void shaman_t::init_spells()
   // Shared
   talent.ascendance      = find_talent_spell( "Ascendance" );
   talent.static_charge   = find_talent_spell( "Static Charge" );
-  talent.totem_mastery   = find_talent_spell( "Totem Mastery" );
   talent.elemental_blast = find_talent_spell( "Elemental Blast" );
   talent.spirit_wolf     = find_talent_spell( "Spirit Wolf" );
   talent.earth_shield    = find_talent_spell( "Earth Shield" );
