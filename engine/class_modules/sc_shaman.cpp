@@ -4574,11 +4574,9 @@ struct earthquake_t : public shaman_spell_t
 // Earth Shock Spell ========================================================
 struct earth_shock_t : public shaman_spell_t
 {
-  action_t* t21_4pc;
 
   earth_shock_t( shaman_t* player, const std::string& options_str )
-    : shaman_spell_t( "earth_shock", player, player->find_specialization_spell( "Earth Shock" ), options_str ),
-      t21_4pc( nullptr )
+    : shaman_spell_t( "earth_shock", player, player->find_specialization_spell( "Earth Shock" ), options_str )
   {
     // hardcoded because spelldata doesn't provide the resource type
     resource_current                   = RESOURCE_MAELSTROM;
@@ -4628,7 +4626,6 @@ struct flame_shock_t : public shaman_spell_t
 {
   flame_shock_spreader_t* spreader;
   const spell_data_t* elemental_resource;
-  const spell_data_t* t20_4pc_bonus;
 
   flame_shock_t( shaman_t* player, const std::string& options_str = std::string() )
     : shaman_spell_t( "flame_shock", player, player->find_class_spell( "Flame Shock" ), options_str ),
