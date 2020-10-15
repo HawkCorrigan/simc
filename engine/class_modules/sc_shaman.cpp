@@ -3844,7 +3844,7 @@ struct chained_base_t : public shaman_spell_t
   {
     shaman_spell_t::execute();
 
-    if ( p()->buff.stormkeeper->check() )
+    if ( p()->buff.stormkeeper->check() && !is_echoed_spell())
     {
       p()->buff.stormkeeper->decrement();
     }
@@ -4881,8 +4881,10 @@ struct lightning_bolt_t : public shaman_spell_t
     {
       p()->trigger_maelstrom_gain( 5.0, p()->gain.high_voltage );
     }
-
-    p()->buff.stormkeeper->decrement();
+    if ( !is_echoed_spell() )
+    {
+      p()->buff.stormkeeper->decrement();
+    }
 
     p()->buff.surge_of_power->decrement();
 
