@@ -6703,7 +6703,7 @@ struct primordial_wave_t : public shaman_spell_t
 
     p()->buff.primordial_wave->trigger();
 
-    if ( p()->conduit.tumbling_waves->ok() && rng().roll( p()->conduit.tumbling_waves.value() / 1000.0 ) )
+    if ( p()->conduit.tumbling_waves->ok())// && rng().roll( p()->conduit.tumbling_waves.value() / 1000.0 ) )
     {
       cooldown->reset( true );
     }
@@ -8894,7 +8894,6 @@ void shaman_t::init_action_list_elemental()
     def->add_action( "bag_of_tricks,if=!talent.ascendance.enabled|!buff.ascendance.up" );
 
     // Covenants
-    def->add_action( "primordial_wave,if=covenant.necrolord" );
     def->add_action( "vesper_totem,if=covenant.kyrian" );
     def->add_action( "chain_harvest,if=covenant.venthyr" );
     def->add_action( "fae_transfusion,if=covenant.night_fae" );
@@ -8916,7 +8915,9 @@ void shaman_t::init_action_list_elemental()
     aoe->add_action( this, "Frost Shock", "moving=1" );
 
     // Single target APL
-    single_target->add_action( this, "Flame Shock", "target_if=refreshable" );
+    single_target->add_action( this, "Lava Burst", "" );
+    single_target->add_action( "primordial_wave,if=!buff.primordial_wave.up" );
+    /*single_target->add_action( this, "Flame Shock", "target_if=refreshable" );
     single_target->add_talent( this, "Elemental Blast", "if=talent.elemental_blast.enabled" );
     single_target->add_talent( this, "Stormkeeper", "if=talent.stormkeeper.enabled" );
     single_target->add_talent( this, "Liquid Magma Totem", "if=talent.liquid_magma_totem.enabled" );
@@ -8933,7 +8934,7 @@ void shaman_t::init_action_list_elemental()
     single_target->add_action( this, "Lightning Bolt" );
     single_target->add_action( this, "Flame Shock", "moving=1,target_if=refreshable" );
     single_target->add_action( this, "Flame Shock", "moving=1,if=movement.distance>6" );
-    single_target->add_action( this, "Frost Shock", "moving=1", "Frost Shock is our movement filler." );
+    single_target->add_action( this, "Frost Shock", "moving=1", "Frost Shock is our movement filler." );*/
   } else if (options.rotation == ROTATION_SIMPLE) {
     action_priority_list_t* single_target = get_action_priority_list( "single_target" );
     action_priority_list_t* aoe           = get_action_priority_list( "aoe" );
