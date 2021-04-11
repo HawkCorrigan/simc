@@ -62,6 +62,7 @@ struct monk_action_t : public Base
   bool ww_mastery;
   bool may_combo_strike;
   bool trigger_chiji;
+  bool trigger_faeline_stomp;
 
   // Affect flags for various dynamic effects
   struct
@@ -81,6 +82,7 @@ public:
       ww_mastery( false ),
       may_combo_strike( false ),
       trigger_chiji( false ),
+      trigger_faeline_stomp( false ),
       affected_by()
   {
     ab::may_crit = true;
@@ -377,7 +379,7 @@ public:
 
     trigger_storm_earth_and_fire( this );
 
-    if ( p()->buff.faeline_stomp->up() && ab::background == false &&
+    if ( p()->buff.faeline_stomp->up() && trigger_faeline_stomp &&
          p()->rng().roll( p()->user_options.faeline_stomp_uptime ) )
       if ( p()->rng().roll( p()->buff.faeline_stomp->value() ) )
       {
@@ -1036,6 +1038,7 @@ struct tiger_palm_t : public monk_melee_attack_t
     ww_mastery       = true;
     may_combo_strike = true;
     trigger_chiji    = true;
+    trigger_faeline_stomp = true;
     sef_ability      = SEF_TIGER_PALM;
 
     add_child( eye_of_the_tiger_damage );
@@ -1162,7 +1165,8 @@ struct rising_sun_kick_dmg_t : public monk_melee_attack_t
 
     background = dual = true;
     may_crit          = true;
-    trigger_chiji     = true;
+    trigger_chiji         = true;
+    trigger_faeline_stomp = true;
 
     if ( p->specialization() == MONK_WINDWALKER )
       ap_type         = attack_power_type::WEAPON_BOTH;
@@ -1258,7 +1262,8 @@ struct rising_sun_kick_t : public monk_melee_attack_t
   {
     parse_options( options_str );
 
-    may_combo_strike     = true;
+    may_combo_strike      = true;
+    trigger_faeline_stomp = true;
     sef_ability          = SEF_RISING_SUN_KICK;
     affected_by.serenity = true;
     ap_type              = attack_power_type::NONE;
@@ -1418,7 +1423,8 @@ struct blackout_kick_t : public monk_melee_attack_t
     parse_options( options_str );
     sef_ability      = SEF_BLACKOUT_KICK;
     may_combo_strike = true;
-    trigger_chiji    = true;
+    trigger_chiji         = true;
+    trigger_faeline_stomp = true;
 
     switch ( p->specialization() )
     {
@@ -1590,7 +1596,8 @@ struct rushing_jade_wind_t : public monk_melee_attack_t
   {
     parse_options( options_str );
     sef_ability      = SEF_RUSHING_JADE_WIND;
-    may_combo_strike = true;
+    may_combo_strike      = true;
+    trigger_faeline_stomp = true;
     gcd_type         = gcd_haste_type::NONE;
 
     // Set dot data to 0, since we handle everything through the buff.
@@ -1744,7 +1751,8 @@ struct spinning_crane_kick_t : public monk_melee_attack_t
     parse_options( options_str );
 
     sef_ability      = SEF_SPINNING_CRANE_KICK;
-    may_combo_strike = true;
+    may_combo_strike      = true;
+    trigger_faeline_stomp = true;
 
     may_crit = may_miss = may_block = may_dodge = may_parry = callbacks = false;
     tick_zero = hasted_ticks = channeled = interrupt_auto_attack = true;
@@ -1903,7 +1911,8 @@ struct fists_of_fury_t : public monk_melee_attack_t
     parse_options( options_str );
 
     sef_ability          = SEF_FISTS_OF_FURY;
-    may_combo_strike     = true;
+    may_combo_strike      = true;
+    trigger_faeline_stomp = true;
     affected_by.serenity = true;
 
     channeled = tick_zero = true;
@@ -1975,10 +1984,12 @@ struct fists_of_fury_t : public monk_melee_attack_t
 
 struct whirling_dragon_punch_tick_t : public monk_melee_attack_t
 {
-  whirling_dragon_punch_tick_t( util::string_view name, monk_t* p, const spell_data_t* s )
-    : monk_melee_attack_t( name, p, s )
+  timespan_t delay;
+  whirling_dragon_punch_tick_t( util::string_view name, monk_t* p, const spell_data_t* s, timespan_t delay )
+    : monk_melee_attack_t( name, p, s ), delay( delay )
   {
     ww_mastery = true;
+    trigger_faeline_stomp = true;
 
     background = true;
     aoe        = -1;
@@ -1989,6 +2000,23 @@ struct whirling_dragon_punch_tick_t : public monk_melee_attack_t
 
 struct whirling_dragon_punch_t : public monk_melee_attack_t
 {
+  whirling_dragon_punch_tick_t* ticks[3];
+
+  struct whirling_dragon_punch_tick_event_t : public event_t
+  {
+    whirling_dragon_punch_tick_t* tick;
+
+    whirling_dragon_punch_tick_event_t( whirling_dragon_punch_tick_t* tick, timespan_t delay )
+        : event_t( *tick->player, delay ), tick( tick )
+    {
+    }
+
+    void execute() override
+    {
+      tick->execute();
+    }
+  };
+
   whirling_dragon_punch_t( monk_t* p, util::string_view options_str )
     : monk_melee_attack_t( "whirling_dragon_punch", p, p->talent.whirling_dragon_punch )
   {
@@ -1996,13 +2024,29 @@ struct whirling_dragon_punch_t : public monk_melee_attack_t
 
     parse_options( options_str );
     interrupt_auto_attack = callbacks = false;
-    channeled                         = true;
+    channeled                         = false;
     may_combo_strike                  = true;
+    trigger_faeline_stomp             = true;
 
     spell_power_mod.direct = 0.0;
 
-    tick_action =
-        new whirling_dragon_punch_tick_t( "whirling_dragon_punch_tick", p, p->passives.whirling_dragon_punch_tick );
+    // 3 server-side hardcoded ticks
+    for ( size_t i = 0; i < 3; ++i )
+    {
+      auto delay = base_tick_time * i;
+      ticks[i] = 
+        new whirling_dragon_punch_tick_t( "whirling_dragon_punch_tick", p, p->passives.whirling_dragon_punch_tick, delay );
+    }
+  }
+
+  void execute() override
+  {
+    monk_melee_attack_t::execute();
+
+    for ( auto& tick : ticks )
+    {
+      make_event<whirling_dragon_punch_tick_event_t>( *sim, tick, tick->delay );
+    }
   }
 
   bool ready() override
@@ -2012,14 +2056,6 @@ struct whirling_dragon_punch_t : public monk_melee_attack_t
       return monk_melee_attack_t::ready();
 
     return false;
-  }
-
-  timespan_t composite_dot_duration( const action_state_t* s ) const override
-  {
-    // WDP has an automatic "tick_on_application" flag set which is causing a tick zero application.
-    // have to set the duration at 2 ticks since the first of the 3 ticks happens at tick zero.
-    timespan_t tt = tick_time( s );
-    return tt * 2;
   }
 };
 
@@ -2036,7 +2072,8 @@ struct fist_of_the_white_tiger_main_hand_t : public monk_melee_attack_t
     : monk_melee_attack_t( name, p, s )
   {
     sef_ability = SEF_FIST_OF_THE_WHITE_TIGER;
-    ww_mastery  = true;
+    ww_mastery            = true;
+    trigger_faeline_stomp = true;
 
     may_dodge = may_parry = may_block = may_miss = true;
     dual                                         = true;
@@ -2054,7 +2091,8 @@ struct fist_of_the_white_tiger_t : public monk_melee_attack_t
   {
     sef_ability          = SEF_FIST_OF_THE_WHITE_TIGER_OH;
     ww_mastery           = true;
-    may_combo_strike     = true;
+    may_combo_strike      = true;
+    trigger_faeline_stomp = true;
     affected_by.serenity = false;
     cooldown->hasted     = false;
     ap_type              = attack_power_type::WEAPON_BOTH;
@@ -2220,6 +2258,7 @@ struct keg_smash_t : public monk_melee_attack_t
     parse_options( options_str );
 
     aoe = -1;
+    trigger_faeline_stomp = true;
 
     attack_power_mod.direct = p.spec.keg_smash->effectN( 2 ).ap_coeff();
     radius                  = p.spec.keg_smash->effectN( 2 ).radius();
@@ -2311,6 +2350,7 @@ struct touch_of_death_t : public monk_melee_attack_t
     ww_mastery              = true;
     may_crit = hasted_ticks = false;
     may_combo_strike        = true;
+    trigger_faeline_stomp   = true;
     parse_options( options_str );
     cooldown->duration = data().cooldown();
 
@@ -2793,6 +2833,7 @@ struct crackling_jade_lightning_t : public monk_spell_t
   {
     sef_ability      = SEF_CRACKLING_JADE_LIGHTNING;
     may_combo_strike = true;
+    trigger_faeline_stomp = true;
 
     parse_options( options_str );
 
@@ -2898,7 +2939,8 @@ struct breath_of_fire_t : public monk_spell_t
     parse_options( options_str );
     gcd_type = gcd_haste_type::NONE;
 
-    aoe = 1;
+    aoe                   = 1;
+    trigger_faeline_stomp = true;
 
     add_child( p.active_actions.breath_of_fire );
   }
@@ -4554,7 +4596,8 @@ struct chi_wave_t : public monk_spell_t
       dmg( true )
   {
     sef_ability      = SEF_CHI_WAVE;
-    may_combo_strike = true;
+    may_combo_strike      = true;
+    trigger_faeline_stomp = true;
     parse_options( options_str );
     hasted_ticks = harmful = false;
     cooldown->hasted       = false;
@@ -4595,9 +4638,11 @@ struct chi_burst_heal_t : public monk_heal_t
 {
   chi_burst_heal_t( monk_t& player ) : monk_heal_t( "chi_burst_heal", player, player.passives.chi_burst_heal )
   {
-    background = true;
+    background            = true;
+    trigger_faeline_stomp = true;
     target     = p();
-    aoe        = -1;
+    // If we are using the user option, each heal just heals 1 target, otherwise use the old SimC code
+    aoe        = ( p()->user_options.chi_burst_healing_targets > 1 ? 1 : -1 );
   }
 };
 
@@ -4608,7 +4653,8 @@ struct chi_burst_damage_t : public monk_spell_t
     : monk_spell_t( "chi_burst_damage", &player, player.passives.chi_burst_damage ), num_hit( 0 )
   {
     background = true;
-    ww_mastery = true;
+    ww_mastery            = true;
+    trigger_faeline_stomp = true;
     aoe        = -1;
   }
 
@@ -4641,7 +4687,8 @@ struct chi_burst_t : public monk_spell_t
     : monk_spell_t( "chi_burst", player, player->talent.chi_burst ), heal( nullptr )
   {
     parse_options( options_str );
-    may_combo_strike = true;
+    may_combo_strike      = true;
+    trigger_faeline_stomp = true;
     heal             = new chi_burst_heal_t( *player );
     heal->stats      = stats;
     damage           = new chi_burst_damage_t( *player );
@@ -4666,7 +4713,15 @@ struct chi_burst_t : public monk_spell_t
   {
     monk_spell_t::execute();
 
-    heal->execute();
+    // AoE healing is wonky in SimC. Try to simulate healing multiple players without over burdening sims
+    if ( p()->user_options.chi_burst_healing_targets > 1 )
+    {
+      int healing_targets = p()->user_options.chi_burst_healing_targets;
+      for ( int i = 0; i < healing_targets; i++ )
+        heal->execute();
+    }
+    else
+      heal->execute();
     damage->execute();
   }
 };
@@ -5418,6 +5473,7 @@ monk_t::monk_t( sim_t* sim, util::string_view name, race_e r )
   user_options.initial_chi              = 1;
   user_options.expel_harm_effectiveness = 1.0;
   user_options.faeline_stomp_uptime     = 1.0;
+  user_options.chi_burst_healing_targets = 1;
 }
 
 // monk_t::create_action ====================================================
@@ -6851,11 +6907,22 @@ void monk_t::create_options()
 {
   base_t::create_options();
 
+  //add_option( opt_deprecated( "initial_chi", "monk.initial_chi" ) );
+  //add_option( opt_deprecated( "memory_of_lucid_dreams_proc_chance", "monk.memory_of_lucid_dreams_proc_chance" ) );
+  //add_option( opt_deprecated( "expel_harm_effectiveness", "monk.expel_harm_effectiveness" ) );
+  //add_option( opt_deprecated( "faeline_stomp_uptime", "monk.faeline_stomp_uptime" ) );
+  //add_option( opt_deprecated( "chi_burst_healing_targets", "monk.chi_burst_healing_targets" ) );
+
   add_option( opt_int( "initial_chi", user_options.initial_chi ) );
-  add_option(
-      opt_float( "memory_of_lucid_dreams_proc_chance", user_options.memory_of_lucid_dreams_proc_chance, 0.0, 1.0 ) );
+  add_option( opt_int( "monk.initial_chi", user_options.initial_chi ) );
+  add_option( opt_float( "memory_of_lucid_dreams_proc_chance", user_options.memory_of_lucid_dreams_proc_chance, 0.0, 1.0 ) );
+  add_option( opt_float( "monk.memory_of_lucid_dreams_proc_chance", user_options.memory_of_lucid_dreams_proc_chance, 0.0, 1.0 ) );
   add_option( opt_float( "expel_harm_effectiveness", user_options.expel_harm_effectiveness, 0.0, 1.0 ) );
+  add_option( opt_float( "monk.expel_harm_effectiveness", user_options.expel_harm_effectiveness, 0.0, 1.0 ) );
   add_option( opt_float( "faeline_stomp_uptime", user_options.faeline_stomp_uptime, 0.0, 1.0 ) );
+  add_option( opt_float( "monk.faeline_stomp_uptime", user_options.faeline_stomp_uptime, 0.0, 1.0 ) );
+  add_option( opt_int( "chi_burst_healing_targets", user_options.chi_burst_healing_targets ) );
+  add_option( opt_int( "monk.chi_burst_healing_targets", user_options.chi_burst_healing_targets ) );
 }
 
 // monk_t::copy_from =========================================================
