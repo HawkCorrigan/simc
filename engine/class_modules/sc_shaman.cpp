@@ -5056,6 +5056,10 @@ struct lava_burst_overload_t : public elemental_overload_spell_t
     {
       maelstrom_gain_coefficient = 2;
     }
+    else
+    {
+      maelstrom_gain_coefficient = 1;
+    }
 
     shaman_spell_t::execute();
 
@@ -5473,6 +5477,10 @@ struct lava_burst_t : public shaman_spell_t
     {
       maelstrom_gain_coefficient = 2;
     }
+    else
+    {
+      maelstrom_gain_coefficient = 1;
+    }
 
     shaman_spell_t::execute();
 
@@ -5580,6 +5588,10 @@ struct lightning_bolt_overload_t : public elemental_overload_spell_t
     if ( p()->buff.t30_4pc_ele->up() )
     {
       maelstrom_gain_coefficient = 2;
+    }
+    else
+    {
+      //maelstrom_gain_coefficient = 1;
     }
 
     elemental_overload_spell_t::execute();
@@ -5736,6 +5748,10 @@ struct lightning_bolt_t : public shaman_spell_t
     if ( p()->buff.t30_4pc_ele->up() )
     {
       maelstrom_gain_coefficient = 2;
+    }
+    else
+    {
+      maelstrom_gain_coefficient = 1;
     }
 
     shaman_spell_t::execute();
@@ -6879,6 +6895,10 @@ struct frost_shock_t : public shaman_spell_t
       if ( p()->buff.t30_4pc_ele->up() )
       {
         maelstrom_gain_coefficient = 2;
+      }
+      else
+      {
+        maelstrom_gain_coefficient = 1;
       }
     }
 
