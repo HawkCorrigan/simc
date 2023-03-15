@@ -800,7 +800,7 @@ public:
   void summon_feral_spirits( timespan_t duration, unsigned n = 2, bool t28 = false );
   void summon_fire_elemental( timespan_t duration );
   void summon_storm_elemental( timespan_t duration );
-  timespan_t last_t30_proc = timespan_t::min();
+  timespan_t last_t30_proc;
 
   std::pair<mw_proc_state, proc_t*>& set_mw_proc_state( action_t* action, mw_proc_state state )
   {
@@ -10892,6 +10892,7 @@ void shaman_t::arise()
     player_t::arise();
   if ( options.t30_2pc_ele )
   {
+    last_t30_proc = timespan_t::min();
     buff.t30_2pc_ele->trigger();
   }
 }
