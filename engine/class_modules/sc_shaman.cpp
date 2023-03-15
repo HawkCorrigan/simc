@@ -5591,7 +5591,7 @@ struct lightning_bolt_overload_t : public elemental_overload_spell_t
     }
     else
     {
-      //maelstrom_gain_coefficient = 1;
+      maelstrom_gain_coefficient = 1;
     }
 
     elemental_overload_spell_t::execute();
