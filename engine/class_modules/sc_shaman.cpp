@@ -4811,8 +4811,10 @@ struct chain_lightning_t : public chained_base_t
   {
     double cm = chained_base_t::composite_crit_damage_bonus_multiplier();
 
-    cm += 0.2;
-
+    if ( p()->buff.t30_4pc_ele->up() )
+    {
+      cm += 0.2;
+    }
     return cm;
   }
 };
@@ -4881,6 +4883,17 @@ struct lava_beam_t : public chained_base_t
     }
 
     chained_base_t::schedule_travel( s );
+  }
+
+  double composite_crit_damage_bonus_multiplier() const override
+  {
+    double cm = chained_base_t::composite_crit_damage_bonus_multiplier();
+
+    if ( p()->buff.t30_4pc_ele->up() )
+    {
+      cm += 0.2;
+    }
+    return cm;
   }
 };
 
@@ -6114,7 +6127,10 @@ struct earthquake_damage_base_t : public shaman_spell_t
   {
     double cm = shaman_spell_t::composite_crit_damage_bonus_multiplier();
 
-    cm += 0.2;
+    if ( p()->buff.t30_4pc_ele->up() )
+    {
+      cm += 0.2;
+    }
 
     return cm;
   }
