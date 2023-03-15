@@ -413,7 +413,7 @@ public:
   struct options_t
   {
     rotation_type_e rotation = ROTATION_STANDARD;
-    bool t30_2pc_ele = false;
+    bool t30_2pc_ele         = false;
     bool t30_4pc_ele         = false;
   } options;
 
@@ -4488,6 +4488,17 @@ struct chained_overload_base_t : public elemental_overload_spell_t
     radius = 10.0;
   }
 
+  double composite_crit_damage_bonus_multiplier() const override
+  {
+    double cm = elemental_overload_spell_t::composite_crit_damage_bonus_multiplier();
+
+    if ( p()->buff.t30_4pc_ele->up() )
+    {
+      cm += 0.2;
+    }
+    return cm;
+  }
+
   std::vector<player_t*>& check_distance_targeting( std::vector<player_t*>& tl ) const override
   {
     return __check_distance_targeting( this, tl );
@@ -4606,6 +4617,17 @@ struct chained_base_t : public shaman_spell_t
 
       p()->buff.stormkeeper->decrement();
     }
+  }
+
+  double composite_crit_damage_bonus_multiplier() const override
+  {
+    double cm = shaman_spell_t::composite_crit_damage_bonus_multiplier();
+
+    if ( p()->buff.t30_4pc_ele->up() )
+    {
+      cm += 0.2;
+    }
+    return cm;
   }
 
   std::vector<player_t*>& check_distance_targeting( std::vector<player_t*>& tl ) const override
@@ -4813,16 +4835,6 @@ struct chain_lightning_t : public chained_base_t
     chained_base_t::schedule_travel( s );
   }
 
-  double composite_crit_damage_bonus_multiplier() const override
-  {
-    double cm = chained_base_t::composite_crit_damage_bonus_multiplier();
-
-    if ( p()->buff.t30_4pc_ele->up() )
-    {
-      cm += 0.2;
-    }
-    return cm;
-  }
 };
 
 struct lava_beam_t : public chained_base_t
@@ -4889,17 +4901,6 @@ struct lava_beam_t : public chained_base_t
     }
 
     chained_base_t::schedule_travel( s );
-  }
-
-  double composite_crit_damage_bonus_multiplier() const override
-  {
-    double cm = chained_base_t::composite_crit_damage_bonus_multiplier();
-
-    if ( p()->buff.t30_4pc_ele->up() )
-    {
-      cm += 0.2;
-    }
-    return cm;
   }
 };
 
@@ -5744,12 +5745,9 @@ struct lightning_bolt_t : public shaman_spell_t
     if ( type == execute_type::NORMAL &&
          p()->specialization() == SHAMAN_ELEMENTAL )
     {
-      if (p()->buff.stormkeeper->stack() == 1 )
+      if ( p()->options.t30_4pc_ele && p()->buff.stormkeeper->stack() == 1 )
       {
-        if ( p()->options.t30_4pc_ele )
-        {
-          p()->buff.t30_4pc_ele->trigger();
-        }
+        p()->buff.t30_4pc_ele->trigger();
       }
       p()->buff.stormkeeper->decrement();
     }
@@ -10889,7 +10887,8 @@ void shaman_t::reset()
 
 void shaman_t::arise()
 {
-    player_t::arise();
+  player_t::arise();
+
   if ( options.t30_2pc_ele )
   {
     last_t30_proc = timespan_t::min();
