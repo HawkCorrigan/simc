@@ -800,6 +800,7 @@ public:
   void summon_feral_spirits( timespan_t duration, unsigned n = 2, bool t28 = false );
   void summon_fire_elemental( timespan_t duration );
   void summon_storm_elemental( timespan_t duration );
+  timespan_t last_t30_proc = timespan_t::min();
 
   std::pair<mw_proc_state, proc_t*>& set_mw_proc_state( action_t* action, mw_proc_state state )
   {
@@ -1424,6 +1425,11 @@ public:
   virtual double composite_maelstrom_gain_coefficient( const action_state_t* state = nullptr ) const
   {
     double m = maelstrom_gain_coefficient;
+
+    if (p()->buff.t30_4pc_ele->up())
+    {
+      m += 1;
+    }
 
     m *= p()->composite_maelstrom_gain_coefficient( state );
 
@@ -4588,16 +4594,16 @@ struct chained_base_t : public shaman_spell_t
   {
     shaman_spell_t::execute();
 
-    if ( p()->specialization() == SHAMAN_ELEMENTAL && p()->buff.stormkeeper->up())
-    {
-      if ( p()->options.t30_4pc_ele )
-      {
-        p()->buff.t30_4pc_ele->trigger();
-      }
-    }
-
     if ( exec_type == execute_type::NORMAL )
     {
+      if ( p()->specialization() == SHAMAN_ELEMENTAL && p()->buff.stormkeeper->stack() == 1 )
+      {
+        if ( p()->options.t30_4pc_ele )
+        {
+          p()->buff.t30_4pc_ele->trigger();
+        }
+      }
+
       p()->buff.stormkeeper->decrement();
     }
   }
@@ -5052,15 +5058,6 @@ struct lava_burst_overload_t : public elemental_overload_spell_t
 
   void execute() override
   {
-    if ( p()->buff.t30_4pc_ele->up() )
-    {
-      maelstrom_gain_coefficient = 2;
-    }
-    else
-    {
-      maelstrom_gain_coefficient = 1;
-    }
-
     shaman_spell_t::execute();
 
     if ( p()->talent.primordial_wave.ok() && p()->talent.rolling_magma.ok() )
@@ -5473,15 +5470,6 @@ struct lava_burst_t : public shaman_spell_t
 
   void execute() override
   {
-    if ( p()->buff.t30_4pc_ele->up() )
-    {
-      maelstrom_gain_coefficient = 2;
-    }
-    else
-    {
-      maelstrom_gain_coefficient = 1;
-    }
-
     shaman_spell_t::execute();
 
     if ( p()->buff.surge_of_power->up() )
@@ -5585,15 +5573,6 @@ struct lightning_bolt_overload_t : public elemental_overload_spell_t
 
   void execute() override
   {
-    if ( p()->buff.t30_4pc_ele->up() )
-    {
-      maelstrom_gain_coefficient = 2;
-    }
-    else
-    {
-      maelstrom_gain_coefficient = 1;
-    }
-
     elemental_overload_spell_t::execute();
 
     p()->buff.t29_2pc_ele->trigger();
@@ -5745,15 +5724,6 @@ struct lightning_bolt_t : public shaman_spell_t
       p()->buff.primordial_wave->expire();
     }
 
-    if ( p()->buff.t30_4pc_ele->up() )
-    {
-      maelstrom_gain_coefficient = 2;
-    }
-    else
-    {
-      maelstrom_gain_coefficient = 1;
-    }
-
     shaman_spell_t::execute();
 
     // Storm Elemental Wind Gust passive buff trigger
@@ -5774,9 +5744,12 @@ struct lightning_bolt_t : public shaman_spell_t
     if ( type == execute_type::NORMAL &&
          p()->specialization() == SHAMAN_ELEMENTAL )
     {
-      if ( p()->options.t30_4pc_ele && p()->buff.stormkeeper->up() )
+      if (p()->buff.stormkeeper->stack() == 1 )
       {
-        p()->buff.t30_4pc_ele->trigger();
+        if ( p()->options.t30_4pc_ele )
+        {
+          p()->buff.t30_4pc_ele->trigger();
+        }
       }
       p()->buff.stormkeeper->decrement();
     }
@@ -6892,17 +6865,7 @@ struct frost_shock_t : public shaman_spell_t
     if ( p()->buff.icefury->up() )
     {
       maelstrom_gain = p()->spec.maelstrom->effectN( 7 ).resource( RESOURCE_MAELSTROM );
-      if ( p()->buff.t30_4pc_ele->up() )
-      {
-        maelstrom_gain_coefficient = 2;
-      }
-      else
-      {
-        maelstrom_gain_coefficient = 1;
-      }
     }
-
-
 
     shaman_spell_t::execute();
 
@@ -9757,9 +9720,18 @@ void shaman_t::create_buffs()
                          ->set_trigger_spell( sets->set( SHAMAN_ELEMENTAL, T29, B4 ) );
 
   buff.t30_2pc_ele =
-      make_buff( this, "t30_2pc_ele" )->set_period(40_s)
+      make_buff( this, "t30_2pc_ele" )->set_period(5_s)
       ->set_tick_callback( [ this ]( buff_t* b, int, timespan_t ) {
-    buff.stormkeeper->trigger(1);
+        timespan_t test = sim->current_time() - 40_s;
+        if ( last_t30_proc < test )
+        {
+          if ( !buff.stormkeeper->up() )
+          {
+            last_t30_proc = sim->current_time();
+            buff.stormkeeper->trigger( 2 );
+          }
+        }
+
   } );
     buff.t30_4pc_ele = make_buff(this, "t30_4pc_ele")
                         ->set_duration(8_s);
