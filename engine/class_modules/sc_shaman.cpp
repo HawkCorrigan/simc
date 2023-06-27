@@ -447,6 +447,7 @@ public:
     rotation_type_e rotation = ROTATION_STANDARD;
     int dre_flat_chance = -1;
     unsigned dre_forced_failures = 2U;
+    int t30_2p_timer_on_pull     = -1;
   } options;
 
   // Cooldowns
@@ -8749,6 +8750,7 @@ void shaman_t::create_options()
   add_option( opt_obsoleted( "shaman.chain_harvest_allies" ) );
   add_option( opt_int( "shaman.dre_flat_chance", options.dre_flat_chance, -1, 1 ) );
   add_option( opt_uint( "shaman.dre_forced_failures", options.dre_forced_failures, 0U, 10U ) );
+  add_option( opt_int( "shaman.t30_2p_timer_on_pull", options.t30_2p_timer_on_pull, -1, 5 ) );
 }
 
 // shaman_t::create_profile ================================================
@@ -8777,6 +8779,7 @@ void shaman_t::copy_from( player_t* source )
   options.rotation = p->options.rotation;
   options.dre_flat_chance = p->options.dre_flat_chance;
   options.dre_forced_failures = p->options.dre_forced_failures;
+  options.t30_2p_timer_on_pull   = p->options.t30_2p_timer_on_pull;
 }
 
 // shaman_t::create_special_effects ========================================
@@ -11262,10 +11265,19 @@ void shaman_t::arise()
 
   if ( sets->has_set_bonus( SHAMAN_ELEMENTAL, T30, B2 ) )
   {
-    last_t30_proc = timespan_t::min();
+    last_t30_proc     = timespan_t::min();
     t30_proc_possible = false;
-    make_event( sim, timespan_t::from_seconds( rng().range( 0, 5 ) ),
-                [ this ]() { buff.t30_2pc_ele_driver->trigger(); } );
+    if ( options.t30_2p_timer_on_pull != -1 )
+    {
+      make_event( sim, timespan_t::from_seconds( options.t30_2p_timer_on_pull ),
+                  [ this ]() { buff.t30_2pc_ele_driver->trigger(); } );
+    
+    }
+    else
+    {
+      make_event( sim, timespan_t::from_seconds( rng().range( 0, 5 ) ),
+                  [ this ]() { buff.t30_2pc_ele_driver->trigger(); } );
+    }
   }
 }
 
