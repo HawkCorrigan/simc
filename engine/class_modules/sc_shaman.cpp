@@ -9637,8 +9637,7 @@ struct primordial_wave_t : public shaman_spell_t
 
   void execute() override
   {
-    // Primordial Wave that summons an Ancestor will trigger a Lava Burst
-    p()->summon_ancestor();
+
 
     shaman_spell_t::execute();
 
@@ -9653,6 +9652,8 @@ struct primordial_wave_t : public shaman_spell_t
       p()->action.feral_spirit_t31->set_target( execute_state->target );
       p()->action.feral_spirit_t31->execute();
     }
+
+    p()->summon_ancestor();
   }
 };
 
