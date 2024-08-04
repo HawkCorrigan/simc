@@ -2641,12 +2641,16 @@ struct shaman_spell_t : public shaman_spell_base_t<spell_t>
       proc_moe->occur();
     }
 
-    if ( exec_type == spell_variant::NORMAL && !background) //TODO: Make this proc on impact
+    p()->trigger_earthen_rage( execute_state );
+  }
+
+  void impact( action_state_t* state ) override
+  {
+    base_t::impact( state );
+    if ( exec_type == spell_variant::NORMAL && !background )  // TODO: Make this proc on impact
     {
       p()->trigger_fusion_of_elements( execute_state );
     }
-
-    p()->trigger_earthen_rage( execute_state );
   }
 
   void schedule_travel( action_state_t* s ) override
