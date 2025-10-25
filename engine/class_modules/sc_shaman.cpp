@@ -1994,6 +1994,7 @@ public:
   void invalidate_cache( cache_e c ) override;
   double non_stacking_movement_modifier() const override;
   double stacking_movement_modifier() const override;
+  double composite_attribute( attribute_e ) const override;
   double composite_player_multiplier( school_e school ) const override;
   double composite_player_critical_damage_multiplier( const action_state_t* state, school_e school ) const override;
   double composite_player_target_multiplier( player_t* target, school_e school ) const override;
@@ -12461,6 +12462,7 @@ void shaman_t::apply_player_effects()
 
   // Elemental
   eff::source_eff_builder_t( mastery.elemental_overload ).build( this );
+  eff::source_eff_builder_t( buff.lightning_shield ).build( this );
   eff::source_eff_builder_t( buff.ascendance ).build( this );
   eff::source_eff_builder_t( buff.surging_elements ).build( this );
 }
@@ -13115,6 +13117,32 @@ double shaman_t::stacking_movement_modifier() const
   }
 
   return ms;
+}
+
+double shaman_t::composite_attribute( attribute_e attr ) const
+{
+  auto a = player_t::composite_attribute( attr );
+
+  if ( attr == ATTR_STR_AGI_INT )
+  {
+    switch ( specialization() )
+    {
+      case SHAMAN_ELEMENTAL:
+      case SHAMAN_ENHANCEMENT:
+        if ( buff.lightning_shield->check() )
+          a += dbc->race_base( race ).strength +
+               dbc->attribute_base( type, level() ).intellect * buff.lightning_shield->data().effectN(4).base_value();
+        break;
+      case DEATH_KNIGHT_UNHOLY:
+        break;
+      case DEATH_KNIGHT_FROST:
+        break;
+      default:
+        break;
+    }
+  }
+
+  return a;
 }
 
 // shaman_t::composite_player_multiplier ====================================
