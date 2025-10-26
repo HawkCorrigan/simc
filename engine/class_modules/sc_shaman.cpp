@@ -1092,11 +1092,6 @@ public:
   unsigned aws_counter;
   double lava_surge_attempts_normalized;
 
-  // Elemental Shamans can extend Ascendance by x sec via Further Beyond (talent)
-  // what if there was an overall cap on Ascendance duration extension per Ascendance proc?
-  timespan_t accumulated_ascendance_extension_time;
-  timespan_t ascendance_extension_cap;
-
   /// Rolling Thunder last trigger
   timespan_t rt_last_trigger;
 
@@ -1239,7 +1234,6 @@ public:
     buff_t* master_of_the_elements;
     buff_t* power_of_the_maelstrom;
     buff_t* stormkeeper;
-    //buff_t* wind_gust;  // Storm Elemental passive 263806
     buff_t* lesser_fire_elemental;
     buff_t* lesser_storm_elemental;
     buff_t* fury_of_the_storms;
@@ -1247,6 +1241,7 @@ public:
     buff_t* call_of_the_ancestors_tww3_set;
     buff_t* ancestral_swiftness;
     buff_t* thunderstrike_ward;
+    buff_t* purging_flames;
 
     buff_t* ancestral_wisdom;
     buff_t* storms_eye;
@@ -1602,7 +1597,7 @@ public:
     player_talent_t storm_frenzy;
     player_talent_t swelling_maelstrom;
     player_talent_t primordial_fury;
-    player_talent_t fury_of_the_storms;
+    player_talent_t fury_of_the_storms; // TODO Hawk: NYI
     player_talent_t herald_of_the_storms;
     player_talent_t flames_of_the_cauldron;
     // Row 6
@@ -1790,8 +1785,6 @@ public:
       dre_attempts( 0U ),
       aws_counter(0U),
       lava_surge_attempts_normalized( 0.0 ),
-      accumulated_ascendance_extension_time( timespan_t::from_seconds( 0 ) ),
-      ascendance_extension_cap( timespan_t::from_seconds( 0 ) ),
       tracker( this ),
       action(),
       pet( this ),
@@ -2625,16 +2618,6 @@ public:
   {
     auto mul = ab::execute_time_pct_multiplier();
 
-    if ( affected_by_ns_cast_time && p()->buff.natures_swiftness->check() && !ab::background )
-    {
-      mul *= 1.0 + p()->talent.natures_swiftness->effectN( 2 ).percent();
-    }
-
-    if ( affected_by_ans_cast_time && p()->buff.ancestral_swiftness->check() && !ab::background )
-    {
-      mul *= 1.0 + p()->buff.ancestral_swiftness->data().effectN( 2 ).percent();
-    }
-
     if ( affected_by_maelstrom_weapon )
     {
       mul *= 1.0 + this->p()->talent.maelstrom_weapon->effectN( 5 ).percent() * this->maelstrom_weapon_stacks();
@@ -2694,12 +2677,12 @@ public:
       p()->buff.flurry->trigger( p()->buff.flurry->max_stack() );
     }
 
-    if ( ( affected_by_ns_cast_time || affected_by_ns_cost ) && !(affected_by_stormkeeper_cast_time && p()->buff.stormkeeper->up()) && !ab::background)
+    if ( ( affected_by_ns_cast_time ) && !(affected_by_stormkeeper_cast_time && p()->buff.stormkeeper->up()) && !ab::background)
     {
       p()->buff.natures_swiftness->decrement();
     }
 
-    if ( ( affected_by_ans_cast_time || affected_by_ans_cost ) && !(affected_by_stormkeeper_cast_time && p()->buff.stormkeeper->up()) && !ab::background)
+    if ( ( affected_by_ans_cast_time ) && !(affected_by_stormkeeper_cast_time && p()->buff.stormkeeper->up()) && !ab::background)
     {
       p()->buff.ancestral_swiftness->decrement();
     }
@@ -5806,11 +5789,6 @@ struct lightning_shield_t : public shaman_spell_t
   {
     parse_options( options_str );
     harmful = false;
-
-    // if ( player->action.lightning_shield )
-    //{
-    // add_child( player->action.lightning_shield );
-    //}
   }
 
   void execute() override
@@ -8387,30 +8365,6 @@ struct healing_wave_t : public shaman_heal_t
   }
 };
 
-// Greater Healing Wave Spell ===============================================
-
-struct greater_healing_wave_t : public shaman_heal_t
-{
-  greater_healing_wave_t( shaman_t* player, util::string_view options_str )
-    : shaman_heal_t("greater_healing_wave", player, player->find_specialization_spell( "Greater Healing Wave" ), options_str )
-  {
-    resurgence_gain =
-        p()->spell.resurgence->effectN( 1 ).average( player ) * p()->spec.resurgence->effectN( 1 ).percent();
-  }
-
-  double execute_time_pct_multiplier() const override
-  {
-    auto mul = shaman_heal_t::execute_time_pct_multiplier();
-
-    if ( p()->buff.tidal_waves->up() )
-    {
-      mul *= 1.0 - p()->spec.tidal_waves->effectN( 1 ).percent();
-    }
-
-    return mul;
-  }
-};
-
 // Riptide Spell ============================================================
 
 struct riptide_t : public shaman_heal_t
@@ -8797,19 +8751,6 @@ struct capacitor_totem_pulse_t : public spell_totem_action_t
     quiet = dual   = true;
     totem_cooldown = totem->o()->get_cooldown( "capacitor_totem" );
   }
-
-  void execute() override
-  {
-    spell_totem_action_t::execute();
-    if ( totem->o()->talent.static_charge->ok() )
-    {
-      // This implementation assumes that every hit target counts. Ingame boss dummy testing showed that only
-      // stunned targets count. TODO: check every hit target for whether it is stunned, or not.
-      int cd_reduction = (int)( num_targets_hit * ( totem->o()->talent.static_charge->effectN( 1 ).base_value() ) );
-      cd_reduction = -std::min( cd_reduction, as<int>( totem->o()->talent.static_charge->effectN( 2 ).base_value() ) );
-      totem_cooldown->adjust( timespan_t::from_seconds( cd_reduction ) );
-    }
-  }
 };
 
 struct capacitor_totem_t : public spell_totem_pet_t
@@ -9138,39 +9079,6 @@ struct searing_totem_t : public spell_totem_pet_t
 // ==========================================================================
 // PvP talents/abilities
 // ==========================================================================
-
- struct lightning_lasso_t : public shaman_spell_t
-{
-  lightning_lasso_t( shaman_t* player, util::string_view options_str )
-    : shaman_spell_t( "lightning_lasso", player, player->find_spell( 305485 ) )
-  {
-    parse_options( options_str );
-    affected_by_master_of_the_elements = true;
-    cooldown->duration                 = p()->find_spell( 305483 )->cooldown();
-    trigger_gcd                        = p()->find_spell( 305483 )->gcd();
-    channeled                          = true;
-    tick_may_crit                      = true;
-  }
-
-  bool ready() override
-  {
-    if ( !p()->talent.lightning_lasso.ok() )
-    {
-      return false;
-    }
-    return shaman_spell_t::ready();
-  }
-
-  double composite_persistent_multiplier( const action_state_t* state ) const override
-  {
-    double m = shaman_spell_t::composite_persistent_multiplier( state );
-    if ( p()->buff.master_of_the_elements->up() )
-    {
-      m *= 1.0 + p()->buff.master_of_the_elements->default_value;
-    }
-    return m;
-  }
-};
 
 struct thundercharge_t : public shaman_spell_t
 {
@@ -12125,9 +12033,6 @@ void shaman_t::create_buffs()
   buff.storm_elemental = make_buff( this, "storm_elemental", spell.storm_elemental );
   buff.lesser_storm_elemental = make_buff( this, "lesser_storm_elemental", find_spell( 462993 ));
 
-  buff.fury_of_the_storms = make_buff( this, "fury_of_storms", find_spell( 191716 ) )
-                                ->set_trigger_spell( talent.fury_of_the_storms );
-
   buff.call_of_the_ancestors = make_buff( this, "call_of_the_ancestors", find_spell( 447244 ) )
     ->set_stack_behavior( buff_stack_behavior::ASYNCHRONOUS )
     ->set_trigger_spell( talent.call_of_the_ancestors );
@@ -12138,6 +12043,8 @@ void shaman_t::create_buffs()
     ->set_trigger_spell( talent.ancestral_swiftness )
     ->set_cooldown( 0_ms );
   buff.thunderstrike_ward = make_buff( this, "thunderstrike_ward", talent.thunderstrike_ward );
+
+  buff.purging_flames = make_buff( this, "purging_flames", find_spell( 1259491 ) );
 
   //
   // Enhancement
@@ -12336,6 +12243,8 @@ void shaman_t::init_assessors()
 void shaman_t::init_rng()
 {
   parse_player_effects_t::init_rng();
+
+  rng_obj.awakening_storms = get_rppm( "awakening_storms", talent.awakening_storms );
   rng_obj.lively_totems = get_rppm( "lively_totems", talent.lively_totems );
   rng_obj.totemic_rebound = get_rppm( "totemic_rebound", talent.totemic_rebound );
 
@@ -13212,9 +13121,6 @@ void shaman_t::reset()
 
   lava_surge_during_lvb = false;
 
-  accumulated_ascendance_extension_time = timespan_t::from_seconds( 0.0 );
-  ascendance_extension_cap = timespan_t::from_seconds( 0.0 );
-
   ls_counter = 0U;
   dre_attempts = 0U;
   aws_counter                    = 0U;
@@ -13861,11 +13767,11 @@ struct shaman_module_t : public module_t
     // This is gross but the current value for the stormkeeper spell
     // when resolved is 0 and not 2, but this achieves the end goal
     // so whatever man
-    hotfix::register_spell( "Shaman", "2024-09-06", "Manually set Stormkeeper max stacks", 191634)
+    /* hotfix::register_spell( "Shaman", "2024-09-06", "Manually set Stormkeeper max stacks", 191634 )
       .field( "max_stack" )
       .operation( hotfix::HOTFIX_SET )
       .modifier( 3 )
-      .verification_value( 0.0 );
+      .verification_value( 0.0 );*/
 
     hotfix::register_effect( "Shaman", "2025-10-19", "Manually add Label to Enhancement 12.0 4PC set bonus", 1276472 )
       .field( "misc_value2" )
