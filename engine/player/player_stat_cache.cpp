@@ -583,7 +583,12 @@ double player_stat_cache_t::pet_damage_multiplier( const action_state_t* s, bool
     _pet_damage_multiplier[ idx ]      = player->composite_player_pet_damage_multiplier( s, guardian );
   }
   else
-    assert( _pet_damage_multiplier[ idx ] == player->composite_player_pet_damage_multiplier( s, guardian ) );
+  {
+    double a = _pet_damage_multiplier[ idx ];
+    double b = player->composite_player_pet_damage_multiplier( s, guardian );
+    assert( a == b );
+  }
+    
   return _pet_damage_multiplier[ idx ];
 }
 

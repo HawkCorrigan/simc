@@ -11907,9 +11907,9 @@ void shaman_t::create_buffs()
     ->set_refresh_behavior( buff_refresh_behavior::PANDEMIC );
 
   buff.elemental_blast_mastery = make_buff<buff_t>( this, "elemental_blast_mastery", find_spell( 173184 ) )
-    ->set_default_value_from_effect_type(A_MOD_MASTERY_PCT)
-    ->set_pct_buff_type( STAT_PCT_BUFF_MASTERY )
-    ->set_refresh_behavior( buff_refresh_behavior::PANDEMIC );
+                                     ->set_default_value_from_effect_type( A_MOD_MASTERY_PCT )
+                                     ->set_pct_buff_type( STAT_PCT_BUFF_MASTERY )
+                                     ->set_refresh_behavior( buff_refresh_behavior::PANDEMIC );
 
   buff.stormkeeper = make_buff( this, "stormkeeper", find_spell( 191634 ) )
     ->set_cooldown( timespan_t::zero() )  // Handled by the action
@@ -13072,6 +13072,14 @@ void shaman_t::invalidate_cache( cache_e c )
     case CACHE_ATTACK_POWER:
       if ( specialization() == SHAMAN_ENHANCEMENT )
         parse_player_effects_t::invalidate_cache( CACHE_SPELL_POWER );
+      break;
+    case CACHE_MASTERY:
+      if ( specialization() == SHAMAN_ELEMENTAL )
+      {
+        parse_player_effects_t::invalidate_cache( CACHE_PET_DAMAGE_MULTIPLIER );
+        parse_player_effects_t::invalidate_cache( CACHE_GUARDIAN_DAMAGE_MULTIPLIER );
+      }
+        
       break;
     default:
       break;
