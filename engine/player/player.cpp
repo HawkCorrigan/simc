@@ -13202,6 +13202,7 @@ void player_t::copy_from( player_t* source )
   class_talents_str                 = source->class_talents_str;
   spec_talents_str                  = source->spec_talents_str;
   hero_talents_str                  = source->hero_talents_str;
+  set_bonus_str                     = source->set_bonus_str;
   player_traits                     = source->player_traits;
   player_sub_trees                  = source->player_sub_trees;
   player_sub_traits                 = source->player_sub_traits;
@@ -15485,9 +15486,9 @@ bool player_t::register_passive_effect( const spelleffect_data_t& modifying_eff,
       case A_MOD_PERCENT_STAT:  // 80
         pct_val = modifying_eff.percent();
         sim->error( SEVERE,
-                    "{} is utilizing aura subtype 80, rather than 137. This is a bug, as it only modifies base "
-                    "attributes.",
-                    modifying_spell->name_cstr() );
+                    "{}(id={}) effect #:{} is utilizing aura subtype 80, rather than 137. This is a bug, as it only "
+                    "modifies base attributes.",
+                    modifying_spell->name_cstr(), modifying_spell->id(), modifying_eff.index() + 1 );
         break;
 
       default:
