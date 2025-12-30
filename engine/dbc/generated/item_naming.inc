@@ -1,5 +1,5 @@
-// Item name descriptions, wow build 12.0.0.64124
-static constexpr std::array<item_name_description_t, 1020> __item_name_description_data { {
+// Item name descriptions, wow build 12.0.1.64914
+static constexpr std::array<item_name_description_t, 1031> __item_name_description_data { {
   {     2, "Now with extra description"                  },
   {    20, "Season 10"                                   },
   {   226, "Season 10 Elite"                             },
@@ -834,7 +834,7 @@ static constexpr std::array<item_name_description_t, 1020> __item_name_descripti
   { 14099, "Heroic|n"                                    },
   { 14100, "Mythic|n"                                    },
   { 14101, "Raid Finder|n"                               },
-  { 14102, "Beginner Crafted"                            },
+  { 14102, "Vanity Crafted"                              },
   { 14103, "Awakened Crafted"                            },
   { 14104, "Kalimdor and Eastern Kingdoms Cups"          },
   { 14105, "Outland Cup"                                 },
@@ -1016,9 +1016,20 @@ static constexpr std::array<item_name_description_t, 1020> __item_name_descripti
   { 14362, "Prey"                                        },
   { 14363, "Horde"                                       },
   { 14364, "Alliance"                                    },
-  { 14365, "Vendors and Rares"                           },
+  { 14365, "Twilight Ascension Vendors and Rare Creatures" },
   { 14366, "Housing Dye Pigment"                         },
   { 14367, "Gravestone Cosmetic"                         },
   { 14368, "Pinnacle Cache - Midnight Season 1"          },
+  { 14401, "Nobility"                                    },
+  { 14402, "Har'alnor"                                   },
+  { 14403, "Shul'ka"                                     },
+  { 14405, "World Quests"                                },
+  { 14406, "Rare Crafted"                                },
+  { 14407, "Epic Crafted"                                },
+  { 14408, "Hard Hunts"                                  },
+  { 14409, "Nightmare Hunts"                             },
+  { 14410, "Tan"                                         },
+  { 14412, "Pinnacle Cache - Midnight Preseason"         },
+  { 14416, "Normal Hunts"                                },
 } };
 

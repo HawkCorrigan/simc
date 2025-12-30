@@ -1526,6 +1526,8 @@ class SpellDataGenerator(DataGenerator):
          # Midnight 12.X.X
          1229746, # Arcanoweave embellishment buff
          1259130, # Primal Spore Binding embellishment heal
+         1232321, 1232324, 1219182, 1232086, 1232087, 1232313, 1232318, 1232325, 1232490, 1232491, 1232493, 1232498, 1232582, 1232585, 1233400, 1233401, 1233403, 1233404, 1233406, 1219183, 1219184, 1219185, 1232089, 1232091, 1232316, 1232317, 1232320, 1232492, 1232496, 1232500, 1232501, 1232584, 1233402, 1233405, 1233407, 1233408, # Midnight Food Buffs
+         1252524, 1257183, 1252814, 1252817, 1252818, 1252832, # Loa Worshipers Band
         ),
 
         # Warrior:
@@ -1632,6 +1634,7 @@ class SpellDataGenerator(DataGenerator):
             ( 1239282, 0),          # Lesser Weapon Damage (TWW3 Lightsmith 4p)
             ( 1239276, 0),          # Lesser Weapon Healing (TWW3 Lightsmith 4p)
             ( 1236972, 0),          # Solar Wrath (TWW3 Herald of the Sun 2pc)
+            ( 431522, 0),           # Dawnlight Buff
         ),
 
         # Hunter:
@@ -1931,8 +1934,9 @@ class SpellDataGenerator(DataGenerator):
           ( 377445, 0 ), # Unholy Aura debuff
           ( 1235391, 0 ), # Dark Transformation player buff
           ( 1250728, 0 ), # Mastery: Dreadblade pet crit buff
+          ( 196910, 0 ), # Raise Skulker
           # The War Within
-          ( 290577, 0 ), # Abomiantion Disease Cloud
+          ( 290577, 5 ), # Abomiantion Disease Cloud
           ( 439539, 0 ), # Icy Death Torrent Damage
           ( 458264, 0 ), ( 458233, 0 ), # Decomposition
           ( 460501, 0 ), # Bloodied blade heart strike
@@ -1985,6 +1989,9 @@ class SpellDataGenerator(DataGenerator):
           ( 1242998, 0 ), # Lesser Ghoul Counter Buff
           ( 1242294, 0 ), # Summon Magus Spell
           ( 1268917, 0 ), # Unholy Aura Mastery Buff
+          ( 1278150, 0 ), # Lesser Ghoul Sweeping Claws
+          ( 1277098, 0 ), # Lesser Ghoul
+          ( 1282570, 0 ), # Forbidden Ritual
         ),
 
         # Shaman:
@@ -2115,6 +2122,7 @@ class SpellDataGenerator(DataGenerator):
           ( 1223801, 0 ),                           # Arcane Rebound
           ( 1217750, 0 ),                           # Master of Flame hidden buff
           ( 1236209, 0 ),                           # Frostfire 4pc Glacial Spike
+          ( 1243460, 0 ),                           # Arcane Pulse Echo
         ),
 
         # Warlock:
@@ -2437,6 +2445,7 @@ class SpellDataGenerator(DataGenerator):
           (  473671, 2 ), # Void Buildup - Meta Resource Spell
           ( 1245455, 2 ), # Cull Damage
           ( 1266301, 2 ), # Consume Soul Heal
+          ( 1223423, 2 ), # Consume Soul Missile
 
           # Annihilator
 
@@ -2479,6 +2488,7 @@ class SpellDataGenerator(DataGenerator):
           ( 410265, 3 ), # Inferno's Blessing
           ( 424368, 3 ), # DF3 4pc Buff Trembling Earth
           ( 409276, 3 ), # Motes of Possibility Buff
+          ( 1259172, 3 ), # Duplicate Eruption
           # Flameshaper
           ( 444249, 0 ), # Firebreath copied by Travelling Flame
           ( 444089, 0 ), # Consume Flame Fire Breath Damage

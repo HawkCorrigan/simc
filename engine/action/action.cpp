@@ -356,6 +356,7 @@ action_t::action_t( action_e ty, util::string_view token, player_t* p, const spe
     not_a_proc(),
     special(),
     channeled(),
+    apply_channel_lag( true ),
     sequence(),
     quiet(),
     background(),
@@ -1702,12 +1703,14 @@ int action_t::num_targets() const
 size_t action_t::available_targets( std::vector<player_t*>& tl ) const
 {
   tl.clear();
-  if ( !target->is_sleeping() && target->is_enemy() )
+
+  const auto& cb = target_filter_callback;
+  if ( !target->is_sleeping() && target->is_enemy() && ( !cb || cb( this, target ) ) )
     tl.push_back( target );
 
   for ( auto* t : sim->target_non_sleeping_list )
   {
-     if ( t->is_enemy() && ( t != target ) )
+    if ( t->is_enemy() && ( t != target ) && ( !cb || cb( this, t ) ) )
     {
       tl.push_back( t );
     }
